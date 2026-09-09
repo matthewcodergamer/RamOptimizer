@@ -18,6 +18,23 @@ RamOptimizer does **not** pretend to clear macOS or Windows RAM directly. It use
 - Local-only statistics and settings.
 - No framework, cloud backend, analytics SDK, content injection, or page tracking.
 
+## Download from GitHub Actions
+
+Every push to `main` creates a downloadable extension artifact automatically.
+
+1. Open the repository's **Actions** tab.
+2. Open the latest successful **Build RamOptimizer** run.
+3. Scroll to **Artifacts**.
+4. Download `RamOptimizer-v1.0.0` (the version number follows `manifest.json`).
+5. Unzip the downloaded artifact.
+6. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the unzipped folder containing `manifest.json`.
+
+The workflow validates the manifest and JavaScript syntax before publishing the artifact.
+
+## Versioned releases
+
+Pushing a Git tag such as `v1.0.0` runs the same validation and automatically creates a GitHub Release containing `RamOptimizer-v1.0.0.zip`.
+
 ## Install locally
 
 1. Download or clone this repository.
@@ -53,6 +70,7 @@ RamOptimizer has no host permissions and does not inject scripts into websites.
 - `background.js` — memory-pressure engine, safe tab scoring, alarms, storage, and toolbar badge.
 - `popup.html` / `popup.css` / `popup.js` — compact extension popup.
 - `options.html` / `options.css` / `options.js` — full settings and protected-site management.
+- `.github/workflows/build-extension.yml` — validates, packages, uploads Actions artifacts, and publishes tagged releases.
 - `icons/ram.svg` — editable source icon.
 - `icons/ram-128.png` — Chrome toolbar/extension icon.
 
