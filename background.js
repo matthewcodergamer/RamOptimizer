@@ -297,8 +297,11 @@ async function sleepDuplicateTabs() {
   const tabs = await chrome.tabs.query({});
   const buckets = new Map();
 
+  // Group every normal web tab first so an active or pinned copy can serve as
+  // the keeper while older safe copies are still eligible to be unloaded.
   for (const tab of tabs) {
-    if (!tab.url || isNeverDiscard(tab, settings)) continue;
+    const host = hostFromUrl(tab.url || '');
+    if (!tab.url || !host) continue;
     if (!buckets.has(tab.url)) buckets.set(tab.url, []);
     buckets.get(tab.url).push(tab);
   }
@@ -306,8 +309,16 @@ async function sleepDuplicateTabs() {
   const toDiscard = [];
   for (const bucket of buckets.values()) {
     if (bucket.length < 2) continue;
-    bucket.sort((a, b) => Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0));
-    toDiscard.push(...bucket.slice(1));
+
+    bucket.sort((a, b) => {
+      const aProtected = isNeverDiscard(a, settings) ? 1 : 0;
+      const bProtected = isNeverDiscard(b, settings) ? 1 : 0;
+      if (aProtected !== bProtected) return bProtected - aProtected;
+      return Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0);
+    });
+
+    const [, ...duplicates] = bucket;
+    toDiscard.push(...duplicates.filter((tab) => !isNeverDiscard(tab, settings)));
   }
 
   const discarded = [];
