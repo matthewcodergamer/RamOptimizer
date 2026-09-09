@@ -1,0 +1,94 @@
+name: Build RamOptimizer
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Package Chrome extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Read extension version
+        id: meta
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Packaging RamOptimizer v$VERSION"
+
+      - name: Validate required extension files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f manifest.json
+          test -f background.js
+          test -f popup.html
+          test -f popup.js
+          test -f popup.css
+          test -f options.html
+          test -f options.js
+          test -f options.css
+          node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'))"
+          node --check background.js
+          node --check popup.js
+          node --check options.js
+
+      - name: Create clean extension package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist/RamOptimizer/icons
+
+          cp manifest.json dist/RamOptimizer/
+          cp background.js dist/RamOptimizer/
+          cp popup.html popup.js popup.css dist/RamOptimizer/
+          cp options.html options.js options.css dist/RamOptimizer/
+          cp PRIVACY.md README.md dist/RamOptimizer/
+          cp -R icons/. dist/RamOptimizer/icons/
+
+          # A user who downloads the Actions artifact can unzip it and point
+          # chrome://extensions -> Load unpacked directly at this folder.
+          test -f dist/RamOptimizer/manifest.json
+
+      - name: Upload downloadable extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RamOptimizer-v${{ steps.meta.outputs.version }}
+          path: dist/RamOptimizer/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+
+      - name: Create release ZIP
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cd dist/RamOptimizer
+          zip -r "../../release/RamOptimizer-${GITHUB_REF_NAME}.zip" .
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            "release/RamOptimizer-${GITHUB_REF_NAME}.zip" \
+            --title "RamOptimizer $GITHUB_REF_NAME" \
+            --generate-notes
