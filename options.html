@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RamOptimizer Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main class="settings-shell">
+    <header class="page-header">
+      <div class="brand-block">
+        <img src="icons/ram.svg" alt="" />
+        <div>
+          <h1>RamOptimizer</h1>
+          <p>Browser resource controls</p>
+        </div>
+      </div>
+      <span class="version">v1.0.0</span>
+    </header>
+
+    <section class="settings-section">
+      <div class="section-intro">
+        <h2>Automatic optimization</h2>
+        <p>RamOptimizer only unloads safe background tabs. Your tabs stay visible and Chrome reloads them when you return.</p>
+      </div>
+      <div class="setting-list">
+        <div class="setting-row">
+          <div>
+            <strong>Automatic optimization</strong>
+            <span>Check memory pressure every two minutes.</span>
+          </div>
+          <button id="enabledToggle" class="switch" type="button" role="switch" aria-checked="true"><span></span></button>
+        </div>
+        <div class="setting-row mode-row">
+          <div>
+            <strong>Optimization mode</strong>
+            <span id="modeSummary">Adaptive protection for everyday browsing.</span>
+          </div>
+          <select id="modeSelect" aria-label="Optimization mode">
+            <option value="balanced">Balanced</option>
+            <option value="smart">Smart</option>
+            <option value="maximum">Maximum Saver</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <div class="section-intro">
+        <h2>Protected websites</h2>
+        <p>Protected domains are never unloaded automatically or by Optimize Now.</p>
+      </div>
+      <div class="protected-box">
+        <form id="protectForm" class="protect-form">
+          <input id="hostInput" type="text" inputmode="url" autocomplete="off" placeholder="example.com" aria-label="Website hostname" />
+          <button type="submit">Add website</button>
+        </form>
+        <div id="protectedEmpty" class="empty-state">No websites are protected yet.</div>
+        <ul id="protectedList" class="protected-list"></ul>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <div class="section-intro">
+        <h2>Maintenance</h2>
+        <p>Run safe cleanup actions without closing your tabs.</p>
+      </div>
+      <div class="action-list">
+        <div class="action-row">
+          <div>
+            <strong>Sleep duplicate tabs</strong>
+            <span>Keep the most recently used copy active and unload older duplicates.</span>
+          </div>
+          <button id="duplicatesButton" class="secondary-button" type="button">Run</button>
+        </div>
+        <div class="action-row">
+          <div>
+            <strong>Optimization statistics</strong>
+            <span id="statsText">No tabs unloaded yet.</span>
+          </div>
+          <button id="resetStatsButton" class="secondary-button" type="button">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-section privacy-section">
+      <div class="section-intro">
+        <h2>Privacy</h2>
+        <p>There is no account, server, telemetry SDK, or browsing-history upload. Settings stay in Chrome's local extension storage.</p>
+      </div>
+      <div class="privacy-note">
+        RamOptimizer requests tab metadata so it can determine which tabs are safe to unload. It does not inject scripts into websites or read page content.
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <span id="saveStatus" role="status" aria-live="polite">Ready</span>
+      <span>Manifest V3 · dependency-free</span>
+    </footer>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

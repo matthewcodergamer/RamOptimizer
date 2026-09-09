@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RamOptimizer</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-icon" src="icons/ram.svg" alt="" />
+        <div>
+          <h1>RamOptimizer</h1>
+          <p id="statusText">Checking memory…</p>
+        </div>
+      </div>
+      <button id="powerToggle" class="switch" type="button" role="switch" aria-checked="true" aria-label="Turn automatic optimization on or off">
+        <span></span>
+      </button>
+    </header>
+
+    <section class="memory-panel" aria-labelledby="memoryTitle">
+      <div class="section-heading">
+        <span id="memoryTitle">System memory</span>
+        <strong id="memoryPercent">—</strong>
+      </div>
+      <div class="meter" aria-hidden="true"><span id="memoryBar"></span></div>
+      <div class="memory-meta">
+        <span id="memoryAvailable">Reading available memory…</span>
+        <span id="pressureBadge" class="pressure">—</span>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="Browser status">
+      <div><strong id="tabCount">—</strong><span>Tabs</span></div>
+      <div><strong id="sleepingCount">—</strong><span>Sleeping</span></div>
+      <div><strong id="protectedCount">—</strong><span>Protected</span></div>
+    </section>
+
+    <section class="control-section">
+      <div class="section-label">Optimization mode</div>
+      <div class="segmented" role="radiogroup" aria-label="Optimization mode">
+        <button type="button" data-mode="balanced">Balanced</button>
+        <button type="button" data-mode="smart">Smart</button>
+        <button type="button" data-mode="maximum">Maximum</button>
+      </div>
+      <p id="modeDescription" class="hint"></p>
+    </section>
+
+    <button id="optimizeButton" class="primary-button" type="button">
+      <span class="bolt" aria-hidden="true">↯</span>
+      <span id="optimizeLabel">Optimize now</span>
+    </button>
+
+    <div id="resultMessage" class="result-message" role="status" aria-live="polite"></div>
+
+    <div class="site-row">
+      <div class="site-copy">
+        <span class="eyebrow">Current site</span>
+        <strong id="currentHost">Not available</strong>
+      </div>
+      <button id="protectButton" class="text-button" type="button" disabled>Protect</button>
+    </div>
+
+    <footer class="footer">
+      <span id="lastRun">No optimization run yet</span>
+      <button id="openSettings" type="button">Settings</button>
+    </footer>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
