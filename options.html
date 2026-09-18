@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RamOptimizer Settings</title>
+  <title>Browser Performance Manager Settings</title>
   <link rel="stylesheet" href="options.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
       <div class="brand-block">
         <img src="icons/ram.svg" alt="" />
         <div>
-          <h1>RamOptimizer</h1>
+          <h1>Browser Performance Manager</h1>
           <p>Browser resource controls</p>
         </div>
       </div>
@@ -22,7 +22,7 @@
     <section class="settings-section">
       <div class="section-intro">
         <h2>Automatic optimization</h2>
-        <p>RamOptimizer only unloads safe background tabs. Your tabs stay visible and Chrome reloads them when you return.</p>
+        <p>Browser Performance Manager only unloads safe background tabs. Your tabs stay visible and Chrome reloads them when you return.</p>
       </div>
       <div class="setting-list">
         <div class="setting-row">
@@ -31,6 +31,20 @@
             <span>Check memory pressure every two minutes.</span>
           </div>
           <button id="enabledToggle" class="switch" type="button" role="switch" aria-checked="true"><span></span></button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong>Auto-suspend inactive tabs</strong>
+            <span>Suspend safe tabs after this many minutes of inactivity.</span>
+          </div>
+          <select id="suspendSelect" aria-label="Auto-suspend interval">
+            <option value="0">Use mode default</option>
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="120">2 hours</option>
+            <option value="180">3 hours</option>
+          </select>
         </div>
         <div class="setting-row mode-row">
           <div>
@@ -90,7 +104,7 @@
         <p>There is no account, server, telemetry SDK, or browsing-history upload. Settings stay in Chrome's local extension storage.</p>
       </div>
       <div class="privacy-note">
-        RamOptimizer requests tab metadata so it can determine which tabs are safe to unload. It does not inject scripts into websites or read page content.
+        Browser Performance Manager requests tab metadata so it can determine which tabs are safe to unload. It does not inject scripts into websites or read page content.
       </div>
     </section>
 
