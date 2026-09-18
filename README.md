@@ -19,7 +19,7 @@ Browser Performance Manager does **not** pretend to clear macOS or Windows RAM d
 - Per-site protection from the popup and settings page.
 - Duplicate-tab sleeper that unloads older duplicate copies without closing them.
 - Local-only statistics and settings.
-- No framework, cloud backend, analytics SDK, content injection, or page tracking.
+- No framework, analytics SDK, content injection, or page tracking. The free plan works locally; Pro billing is handled separately by the optional billing service.
 
 ## Download from GitHub Actions
 
