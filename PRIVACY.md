@@ -1,6 +1,6 @@
 # Privacy
 
-RamOptimizer is designed to work locally inside Chrome.
+Browser Performance Manager is designed to work locally inside Chrome.
 
 - No account is required.
 - No analytics or telemetry SDK is included.
