@@ -1,4 +1,4 @@
-name: Build RamOptimizer
+name: Build Browser Performance Manager
 
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./manifest.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Packaging RamOptimizer v$VERSION"
+          echo "Packaging BrowserPerformanceManager v$VERSION"
 
       - name: Validate required extension files
         shell: bash
@@ -50,24 +50,24 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf dist
-          mkdir -p dist/RamOptimizer/icons
+          mkdir -p dist/BrowserPerformanceManager/icons
 
-          cp manifest.json dist/RamOptimizer/
-          cp background.js dist/RamOptimizer/
-          cp popup.html popup.js popup.css dist/RamOptimizer/
-          cp options.html options.js options.css dist/RamOptimizer/
-          cp PRIVACY.md README.md dist/RamOptimizer/
-          cp -R icons/. dist/RamOptimizer/icons/
+          cp manifest.json dist/BrowserPerformanceManager/
+          cp background.js dist/BrowserPerformanceManager/
+          cp popup.html popup.js popup.css dist/BrowserPerformanceManager/
+          cp options.html options.js options.css dist/BrowserPerformanceManager/
+          cp PRIVACY.md README.md dist/BrowserPerformanceManager/
+          cp -R icons/. dist/BrowserPerformanceManager/icons/
 
           # A user who downloads the Actions artifact can unzip it and point
           # chrome://extensions -> Load unpacked directly at this folder.
-          test -f dist/RamOptimizer/manifest.json
+          test -f dist/BrowserPerformanceManager/manifest.json
 
       - name: Upload downloadable extension artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RamOptimizer-v${{ steps.meta.outputs.version }}
-          path: dist/RamOptimizer/
+          name: BrowserPerformanceManager-v${{ steps.meta.outputs.version }}
+          path: dist/BrowserPerformanceManager/
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
@@ -78,8 +78,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release
-          cd dist/RamOptimizer
-          zip -r "../../release/RamOptimizer-${GITHUB_REF_NAME}.zip" .
+          cd dist/BrowserPerformanceManager
+          zip -r "../../release/BrowserPerformanceManager-${GITHUB_REF_NAME}.zip" .
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -89,6 +89,6 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "$GITHUB_REF_NAME" \
-            "release/RamOptimizer-${GITHUB_REF_NAME}.zip" \
-            --title "RamOptimizer $GITHUB_REF_NAME" \
+            "release/BrowserPerformanceManager-${GITHUB_REF_NAME}.zip" \
+            --title "BrowserPerformanceManager $GITHUB_REF_NAME" \
             --generate-notes
