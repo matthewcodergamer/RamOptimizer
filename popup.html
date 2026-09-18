@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RamOptimizer</title>
+  <title>Browser Performance Manager</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
       <div class="brand">
         <img class="brand-icon" src="icons/ram.svg" alt="" />
         <div>
-          <h1>RamOptimizer</h1>
+          <h1>Browser Performance Manager</h1>
           <p id="statusText">Checking memory…</p>
         </div>
       </div>
@@ -37,6 +37,11 @@
       <div><strong id="tabCount">—</strong><span>Tabs</span></div>
       <div><strong id="sleepingCount">—</strong><span>Sleeping</span></div>
       <div><strong id="protectedCount">—</strong><span>Protected</span></div>
+    </section>
+
+    <section class="tab-section">
+      <div class="section-label">Tab pressure</div>
+      <div id="tabList" class="tab-list" aria-live="polite"></div>
     </section>
 
     <section class="control-section">
