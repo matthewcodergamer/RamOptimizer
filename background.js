@@ -50,7 +50,7 @@ function normalizeSettings(value) {
     ...raw,
     mode: MODES[raw.mode] ? raw.mode : DEFAULTS.mode,
     autoSuspendMinutes: Number.isFinite(Number(raw.autoSuspendMinutes)) && Number(raw.autoSuspendMinutes) >= 0
-      ? Math.min(1440, Math.max(5, Number(raw.autoSuspendMinutes)))
+      ? Math.min(1440, Math.max(0, Number(raw.autoSuspendMinutes)))
       : DEFAULTS.autoSuspendMinutes,
     quietHours: normalizeQuietHours(raw.quietHours),
     protectedHosts: Array.isArray(raw.protectedHosts)
@@ -84,7 +84,7 @@ async function patchSettings(patch) {
 
 function normalizeQuietHours(value) {
   const raw = value && typeof value === 'object' ? value : {};
-  const validTime = (input, fallback) => /^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(input || ''))
+  const validTime = (input, fallback) => /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(String(input || ''))
     ? String(input)
     : fallback;
   return {
