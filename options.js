@@ -92,16 +92,6 @@ $('#enabledToggle').addEventListener('click', async () => {
   }
 });
 
-$('#suspendSelect').addEventListener('change', async (event) => {
-  try {
-    await send('SET_AUTO_SUSPEND', { minutes: Number(event.target.value) });
-    setStatus('Suspension interval saved', 'success');
-    await refresh();
-  } catch (error) {
-    setStatus(error.message, 'error');
-  }
-});
-
 $('#modeSelect').addEventListener('change', async (event) => {
   try {
     await send('SET_MODE', { mode: event.target.value });
