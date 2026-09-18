@@ -10,7 +10,7 @@ const modeDescriptions = {
 
 async function send(type, payload = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
-  if (!response?.ok) throw new Error(response?.error || 'RamOptimizer could not complete that action.');
+  if (!response?.ok) throw new Error(response?.error || 'Browser Performance Manager could not complete that action.');
   return response;
 }
 
@@ -33,6 +33,7 @@ function render(data) {
 
   $('#enabledToggle').setAttribute('aria-checked', String(settings.enabled));
   $('#modeSelect').value = settings.mode;
+  $('#suspendSelect').value = String(settings.autoSuspendMinutes);
   $('#modeSummary').textContent = modeDescriptions[settings.mode];
 
   const list = $('#protectedList');
@@ -84,6 +85,16 @@ $('#enabledToggle').addEventListener('click', async () => {
   try {
     await send('SET_ENABLED', { enabled: !state.settings.enabled });
     setStatus('Automatic optimization updated', 'success');
+    await refresh();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+});
+
+$('#suspendSelect').addEventListener('change', async (event) => {
+  try {
+    await send('SET_AUTO_SUSPEND', { minutes: Number(event.target.value) });
+    setStatus('Suspension interval saved', 'success');
     await refresh();
   } catch (error) {
     setStatus(error.message, 'error');
