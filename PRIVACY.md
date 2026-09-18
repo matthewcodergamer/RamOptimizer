@@ -2,7 +2,8 @@
 
 Browser Performance Manager is designed to work locally inside Chrome.
 
-- No account is required.
+- The free plan requires no account.
+- Pro uses a locally stored signed license token; the extension does not send browsing data to the billing service.
 - No analytics or telemetry SDK is included.
 - No browsing data is sent to a remote server.
 - No content scripts are injected into websites.
