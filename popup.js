@@ -152,9 +152,14 @@ $('#optimizeButton').addEventListener('click', async () => {
     const count = response.discarded?.length || 0;
     const delta = Number(response.result?.memoryDeltaBytes || 0);
     const deltaText = delta > 0 ? `${bytesToGiB(delta)} released` : '';
+    const before = Number(response.result?.beforeUsedPercent);
+    const after = Number(response.result?.afterUsedPercent);
+    const memoryText = Number.isFinite(before) && Number.isFinite(after) && before !== after
+      ? ` · memory ${before.toFixed(1)}% → ${after.toFixed(1)}%`
+      : '';
     setResult(
       count
-        ? `${count} inactive ${count === 1 ? 'tab' : 'tabs'} unloaded${deltaText ? ' · ' + deltaText : ''}. Chrome reloads them when you return.`
+        ? `${count} inactive ${count === 1 ? 'tab' : 'tabs'} unloaded${deltaText ? ' · ' + deltaText : ''}${memoryText}. Chrome reloads them when you return.`
         : response.result?.message || 'Nothing needed to be unloaded.',
       count ? 'success' : ''
     );
