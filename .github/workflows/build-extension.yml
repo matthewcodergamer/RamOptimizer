@@ -56,7 +56,7 @@ jobs:
         run: |
           set -euo pipefail
           ! grep -q 'REPLACE_WITH_YOUR_PRODUCTION_RSA_PUBLIC_KEY' premium.js
-          test -n "${BPM_BILLING_URL:-}"
+          grep -Eq "const BPM_BILLING_URL = 'https://[^']+';" premium-config.js
 
       - name: Create clean extension package
         shell: bash
