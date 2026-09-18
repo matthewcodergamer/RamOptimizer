@@ -548,7 +548,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       case 'SET_AUTO_SUSPEND': {
         const minutes = Number(message.minutes);
         const entitlement = await getEntitlement();
-        const freeValues = [0, 30, 60, 120];
+        const freeValues = [0, 15, 30, 60, 120, 180];
         if (!entitlement.active && !freeValues.includes(minutes)) {
           throw new Error('Custom suspension intervals are a Pro feature.');
         }
@@ -627,7 +627,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
       case 'SET_MODE': {
         if (!MODES[message.mode]) throw new Error('Unknown optimizer mode.');
-        if (message.mode === 'maximum') await requirePro();
         const settings = await patchSettings({ mode: message.mode });
         return { ok: true, settings };
       }
