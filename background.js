@@ -327,7 +327,7 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
 
     await setSettings({
       ...settings,
-      performanceHistory: history,
+      performanceHistory: entitlement.active ? history : settings.performanceHistory,
       stats: {
         ...settings.stats,
         cycles: settings.stats.cycles + (manual ? 0 : 1),
@@ -363,7 +363,7 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
 
   await setSettings({
     ...settings,
-    performanceHistory: history,
+    performanceHistory: entitlement.active ? history : settings.performanceHistory,
     stats: {
       ...settings.stats,
       cycles: settings.stats.cycles + (manual ? 0 : 1),
