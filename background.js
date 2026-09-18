@@ -204,11 +204,10 @@ async function buildCandidates(settings, manual = false) {
     .sort((a, b) => b.score - a.score);
 }
 
-function chooseDiscardCount(memory, mode, manual, candidateCount) {
+function chooseDiscardCount(memory, mode, manual, candidateCount, autoSuspendMinutes) {
   if (!candidateCount) return 0;
   if (manual) return Math.min(mode.maxPerCycle, candidateCount);
-  const configuredAgeSuspension = mode && candidateCount > 0;
-  if (memory.usedPercent < mode.triggerPercent && !configuredAgeSuspension) return 0;
+  if (autoSuspendMinutes === 0 && memory.usedPercent < mode.triggerPercent) return 0;
 
   const pressureOverage = Math.max(0, memory.usedPercent - mode.triggerPercent);
   const desired = 1 + Math.floor(pressureOverage / 3);
@@ -247,7 +246,7 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
   }
 
   const candidates = await buildCandidates(settings, manual);
-  const discardCount = chooseDiscardCount(memory, mode, manual, candidates.length);
+  const discardCount = chooseDiscardCount(memory, mode, manual, candidates.length, settings.autoSuspendMinutes);
 
   if (discardCount === 0) {
     const result = {
@@ -255,7 +254,9 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
       reason,
       discarded: 0,
       beforeUsedPercent: memory.usedPercent,
-      message: memory.usedPercent < mode.triggerPercent && !manual
+      afterUsedPercent: memory.usedPercent,
+      memoryDeltaBytes: 0,
+      message: memory.usedPercent < mode.triggerPercent && !manual && settings.autoSuspendMinutes === 0
         ? 'Memory pressure is below the current trigger.'
         : 'No safe inactive tabs are old enough to unload.'
     };
@@ -358,12 +359,25 @@ async function sleepDuplicateTabs() {
   return { ok: true, discarded: discarded.length };
 }
 
+async function getTabPressureCandidates(settings) {
+  const candidates = await buildCandidates(settings, false);
+  return candidates.slice(0, 5).map(({ tab, ageMinutes: inactiveMinutes, score }) => ({
+    id: tab.id,
+    title: tab.title || hostFromUrl(tab.url || '') || 'Untitled tab',
+    host: hostFromUrl(tab.url || ''),
+    ageMinutes: inactiveMinutes,
+    discarded: Boolean(tab.discarded),
+    reason: tab.discarded ? 'Suspended' : score >= 90 ? 'High pressure' : 'Inactive'
+  }));
+}
+
 async function getDashboard() {
   const settings = await getSettings();
-  const [memory, tabs, activeTabs] = await Promise.all([
+  const [memory, tabs, activeTabs, tabCandidates] = await Promise.all([
     getMemorySnapshot(),
     getTabsSnapshot(settings),
-    chrome.tabs.query({ active: true, currentWindow: true })
+    chrome.tabs.query({ active: true, currentWindow: true }),
+    getTabPressureCandidates(settings)
   ]);
 
   const active = activeTabs[0];
@@ -374,6 +388,7 @@ async function getDashboard() {
     modeConfig: MODES[settings.mode],
     memory,
     tabs,
+    tabCandidates,
     currentSite: {
       host: currentHost,
       protected: hostIsProtected(currentHost, settings.protectedHosts)
@@ -499,7 +514,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
   })()
     .then(sendResponse)
-    .catch((error) => sendResponse({ ok: false, error: error?.message || 'RamOptimizer error.' }));
+    .catch((error) => sendResponse({ ok: false, error: error?.message || 'Browser Performance Manager error.' }));
 
   return true;
 });
