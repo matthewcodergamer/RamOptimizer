@@ -182,23 +182,25 @@ function renderPro(data) {
   $('#quietStart').disabled = !active;
   $('#quietEnd').disabled = !active;
 
-  const history = settings.performanceHistory || [];
-  $('#historyPoints').textContent = history.length;
+  const history = active ? (settings.performanceHistory || []) : [];
+  $('#historyPoints').textContent = active ? history.length : 'Pro';
   if (history.length) {
     const values = history.map((point) => Number(point.usedPercent) || 0);
     const average = values.reduce((sum, value) => sum + value, 0) / values.length;
     $('#historyPeak').textContent = `${Math.max(...values).toFixed(1)}%`;
     $('#historyAverage').textContent = `${average.toFixed(1)}%`;
   } else {
-    $('#historyPeak').textContent = '—';
-    $('#historyAverage').textContent = '—';
+    $('#historyPeak').textContent = active ? '—' : 'Pro';
+    $('#historyAverage').textContent = active ? '—' : 'Pro';
   }
 
-  const snapshots = settings.snapshots || [];
+  const snapshots = active ? (settings.snapshots || []) : [];
   const list = $('#snapshotList');
   list.textContent = '';
   $('#snapshotEmpty').hidden = snapshots.length > 0;
   list.hidden = snapshots.length === 0;
+  $('#snapshotName').disabled = !active;
+  $('#snapshotForm button').disabled = !active;
   snapshots.slice().reverse().forEach((snapshot) => {
     const item = document.createElement('li');
     const label = document.createElement('span');
