@@ -27,7 +27,7 @@ function relativeTime(timestamp) {
 
 async function send(type, payload = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
-  if (!response?.ok) throw new Error(response?.error || 'RamOptimizer could not complete that action.');
+  if (!response?.ok) throw new Error(response?.error || 'Browser Performance Manager could not complete that action.');
   return response;
 }
 
@@ -45,7 +45,7 @@ function setResult(message, kind = '') {
 
 function render(data) {
   dashboard = data;
-  const { settings, memory, tabs, currentSite } = data;
+  const { settings, memory, tabs, currentSite, tabCandidates } = data;
 
   $('#powerToggle').setAttribute('aria-checked', String(settings.enabled));
   $('#statusText').textContent = settings.enabled ? 'Automatic optimization is on' : 'Automatic optimization is off';
@@ -80,6 +80,26 @@ function render(data) {
   $('#protectButton').textContent = currentSite.protected ? 'Unprotect' : 'Protect';
 
   $('#lastRun').textContent = relativeTime(settings.lastResult?.timestamp);
+  const tabList = $('#tabList');
+  tabList.textContent = '';
+  (tabCandidates || []).slice(0, 5).forEach((item) => {
+    const row = document.createElement('div');
+    row.className = 'tab-item';
+    const title = document.createElement('strong');
+    title.textContent = item.title || item.host || 'Untitled tab';
+    const meta = document.createElement('span');
+    meta.textContent = item.discarded ? 'Suspended' : item.reason;
+    const age = document.createElement('small');
+    age.textContent = item.ageMinutes > 0 ? `${item.ageMinutes}m inactive` : 'Recently used';
+    row.append(title, meta, age);
+    tabList.append(row);
+  });
+  if (!(tabCandidates || []).length) {
+    const empty = document.createElement('div');
+    empty.className = 'tab-empty';
+    empty.textContent = 'No inactive tabs need attention right now.';
+    tabList.append(empty);
+  }
 }
 
 async function refresh() {
