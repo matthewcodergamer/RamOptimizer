@@ -58,41 +58,116 @@ jobs:
           ! grep -q 'REPLACE_WITH_YOUR_PRODUCTION_RSA_PUBLIC_KEY' premium.js
           grep -Eq "const BPM_BILLING_URL = 'https://[^']+';" premium-config.js
 
-      - name: Create clean extension package
+      - name: Create Free build
         shell: bash
         run: |
           set -euo pipefail
           rm -rf dist
-          mkdir -p dist/BrowserPerformanceManager/icons
+          mkdir -p dist/free/BrowserPerformanceManager/icons
 
-          cp manifest.json dist/BrowserPerformanceManager/
-          cp background.js premium.js premium-config.js dist/BrowserPerformanceManager/
-          cp popup.html popup.js popup.css dist/BrowserPerformanceManager/
-          cp options.html options.js options.css dist/BrowserPerformanceManager/
-          cp PRIVACY.md README.md dist/BrowserPerformanceManager/
-          cp -R icons/. dist/BrowserPerformanceManager/icons/
+          cp manifest.json dist/free/BrowserPerformanceManager/
+          cp background.js premium.js premium-config.js dist/free/BrowserPerformanceManager/
+          cp popup.html popup.js popup.css dist/free/BrowserPerformanceManager/
+          cp options.html options.js options.css dist/free/BrowserPerformanceManager/
+          cp PRIVACY.md README.md dist/free/BrowserPerformanceManager/
+          cp -R icons/. dist/free/BrowserPerformanceManager/icons/
 
-          # A user who downloads the Actions artifact can unzip it and point
-          # chrome://extensions -> Load unpacked directly at this folder.
-          test -f dist/BrowserPerformanceManager/manifest.json
+          test -f dist/free/BrowserPerformanceManager/manifest.json
 
-      - name: Upload downloadable extension artifact
+      - name: Create Pro test build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/pro-test/BrowserPerformanceManager/icons
+          cp manifest.json dist/pro-test/BrowserPerformanceManager/
+          cp background.js premium.js premium-config.js dist/pro-test/BrowserPerformanceManager/
+          cp popup.html popup.js popup.css dist/pro-test/BrowserPerformanceManager/
+          cp options.html options.js options.css dist/pro-test/BrowserPerformanceManager/
+          cp PRIVACY.md README.md dist/pro-test/BrowserPerformanceManager/
+          cp -R icons/. dist/pro-test/BrowserPerformanceManager/icons/
+
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out dist/pro-test/test-private-key.pem 2>/dev/null
+          openssl rsa -in dist/pro-test/test-private-key.pem -pubout -out dist/pro-test/test-public-key.pem 2>/dev/null
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const dir = 'dist/pro-test/BrowserPerformanceManager';
+          const key = fs.readFileSync('dist/pro-test/test-private-key.pem', 'utf8');
+          const publicKey = fs.readFileSync('dist/pro-test/test-public-key.pem', 'utf8');
+          const premiumPath = dir + '/premium.js';
+          const premium = fs.readFileSync(premiumPath, 'utf8');
+          fs.writeFileSync(
+            premiumPath,
+            premium.replace(
+              /-----BEGIN PUBLIC KEY-----[\s\S]*?-----END PUBLIC KEY-----/,
+              publicKey.trim()
+            )
+          );
+
+          const b64 = value => Buffer.from(value).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const header = b64(JSON.stringify({alg:'RS256', typ:'JWT'}));
+          const payload = b64(JSON.stringify({
+            iss:'browser-performance-manager',
+            aud:'extension',
+            sub:'pro-test-customer',
+            plan:'pro',
+            exp:now + 30 * 24 * 60 * 60,
+            iat:now,
+            jti:crypto.randomUUID(),
+            features:[
+              'custom-schedules',
+              'quiet-hours',
+              'unlimited-protected-sites',
+              'performance-history',
+              'session-snapshots',
+              'turbo-saver'
+            ]
+          }));
+          const input = header + '.' + payload;
+          const signature = crypto.createSign('RSA-SHA256').update(input).sign(key, 'base64url');
+          fs.writeFileSync(dir + '/PRO-TEST-LICENSE.txt', input + '.' + signature + '\n');
+
+          const manifestPath = dir + '/manifest.json';
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          manifest.name = 'Browser Performance Manager Pro [TEST]';
+          manifest.description = 'Test build of Browser Performance Manager Pro. Not for Chrome Web Store publication.';
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+
+          rm -f dist/pro-test/test-private-key.pem dist/pro-test/test-public-key.pem
+          test -f dist/pro-test/BrowserPerformanceManager/PRO-TEST-LICENSE.txt
+          ! grep -q 'REPLACE_WITH_YOUR_PRODUCTION_RSA_PUBLIC_KEY' dist/pro-test/BrowserPerformanceManager/premium.js
+
+      - name: Upload Free build
         uses: actions/upload-artifact@v4
         with:
-          name: BrowserPerformanceManager-v${{ steps.meta.outputs.version }}
-          path: dist/BrowserPerformanceManager/
+          name: BrowserPerformanceManager-Free-v${{ steps.meta.outputs.version }}
+          path: dist/free/BrowserPerformanceManager/
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
 
-      - name: Create release ZIP
+      - name: Upload Pro test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: BrowserPerformanceManager-Pro-Test-v${{ steps.meta.outputs.version }}
+          path: dist/pro-test/BrowserPerformanceManager/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+
+      - name: Create release ZIPs
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p release
-          cd dist/BrowserPerformanceManager
-          zip -r "../../release/BrowserPerformanceManager-${GITHUB_REF_NAME}.zip" .
+          cd dist/free/BrowserPerformanceManager
+          zip -r "../../release/BrowserPerformanceManager-Free-${GITHUB_REF_NAME}.zip" .
+          cd ../../pro-test/BrowserPerformanceManager
+          zip -r "../../release/BrowserPerformanceManager-Pro-Test-${GITHUB_REF_NAME}.zip" .
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -102,6 +177,7 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "$GITHUB_REF_NAME" \
-            "release/BrowserPerformanceManager-${GITHUB_REF_NAME}.zip" \
+            release/BrowserPerformanceManager-Free-${GITHUB_REF_NAME}.zip \
+            release/BrowserPerformanceManager-Pro-Test-${GITHUB_REF_NAME}.zip \
             --title "BrowserPerformanceManager $GITHUB_REF_NAME" \
             --generate-notes
