@@ -75,3 +75,25 @@ select { min-width: 148px; height: 33px; padding: 0 30px 0 10px; border: 1px sol
   .setting-row, .action-row { align-items: flex-start; }
   .mode-row { align-items: center; }
 }
+
+
+.pro-settings, .history-card, .snapshot-box { background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.pro-status { padding:14px 16px; font-size:12px; font-weight:680; background:#f6f7f6; }
+.pro-status.active { color:var(--green-dark); background:var(--green-soft); }
+.pro-actions { display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line); }
+.primary-small { height:33px; padding:0 12px; border:1px solid var(--green-dark); border-radius:8px; background:var(--green); color:#fff; font-size:11px; font-weight:650; cursor:pointer; }
+.primary-small:hover { background:var(--green-dark); }
+.license-form { display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line); }
+.license-form input { min-width:0; flex:1; height:33px; padding:0 10px; border:1px solid #cfd5d1; border-radius:8px; color:var(--text); font:11px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.pro-hint { padding:0 12px 12px; color:var(--muted); font-size:10px; line-height:1.4; }
+.time-controls { display:flex; align-items:center; gap:6px; }
+.time-controls input[type="time"] { height:31px; padding:0 7px; border:1px solid #cfd5d1; border-radius:7px; background:#fff; color:var(--text); font-size:11px; }
+.time-controls input[type="checkbox"] { width:15px; height:15px; accent-color:var(--green); }
+.history-card { display:grid; grid-template-columns:repeat(3,1fr); }
+.history-card div { padding:16px; }
+.history-card div + div { border-left:1px solid var(--line); }
+.history-card strong { display:block; font-size:17px; font-variant-numeric:tabular-nums; }
+.history-card span { display:block; margin-top:4px; color:var(--muted); font-size:10px; }
+.snapshot-actions { display:flex !important; align-items:center; gap:7px; margin-top:0 !important; color:inherit !important; }
+.snapshot-actions button { border:0; background:transparent; color:var(--green-dark); font-size:10.5px; font-weight:620; cursor:pointer; padding:5px; }
+.snapshot-actions button:last-child { color:var(--danger); }

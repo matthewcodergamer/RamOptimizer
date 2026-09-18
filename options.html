@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RamOptimizer Settings</title>
+  <title>Browser Performance Manager Settings</title>
   <link rel="stylesheet" href="options.css" />
 </head>
 <body>
@@ -12,17 +12,17 @@
       <div class="brand-block">
         <img src="icons/ram.svg" alt="" />
         <div>
-          <h1>RamOptimizer</h1>
+          <h1>Browser Performance Manager</h1>
           <p>Browser resource controls</p>
         </div>
       </div>
-      <span class="version">v1.0.0</span>
+      <span class="version">v2.1.0</span>
     </header>
 
     <section class="settings-section">
       <div class="section-intro">
         <h2>Automatic optimization</h2>
-        <p>RamOptimizer only unloads safe background tabs. Your tabs stay visible and Chrome reloads them when you return.</p>
+        <p>Browser Performance Manager only unloads safe background tabs. Your tabs stay visible and Chrome reloads them when you return.</p>
       </div>
       <div class="setting-list">
         <div class="setting-row">
@@ -31,6 +31,20 @@
             <span>Check memory pressure every two minutes.</span>
           </div>
           <button id="enabledToggle" class="switch" type="button" role="switch" aria-checked="true"><span></span></button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong>Auto-suspend inactive tabs</strong>
+            <span>Suspend safe tabs after this many minutes of inactivity.</span>
+          </div>
+          <select id="suspendSelect" aria-label="Auto-suspend interval">
+            <option value="0">Use mode default</option>
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="120">2 hours</option>
+            <option value="180">3 hours</option>
+          </select>
         </div>
         <div class="setting-row mode-row">
           <div>
@@ -43,6 +57,94 @@
             <option value="maximum">Maximum Saver</option>
           </select>
         </div>
+      </div>
+    </section>
+
+
+    <section class="settings-section">
+      <div class="section-intro">
+        <h2>Pro</h2>
+        <p>Advanced automation, history and session tools. Your license is verified locally; the extension never sends browsing data to a licensing server.</p>
+      </div>
+      <div class="pro-settings">
+        <div class="pro-status" id="proStatus">Free plan</div>
+        <div class="pro-actions">
+          <button id="buyProButton" class="primary-small" type="button">Get Pro</button>
+          <button id="manageProButton" class="secondary-button" type="button" hidden>Manage Pro</button>
+        </div>
+        <div class="license-form">
+          <input id="licenseInput" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your Pro license" aria-label="Pro license" />
+          <button id="activateLicenseButton" class="secondary-button" type="button">Activate</button>
+          <button id="deactivateLicenseButton" class="secondary-button" type="button" hidden>Deactivate</button>
+        </div>
+        <div id="licenseHint" class="pro-hint">Pro licenses are signed and checked on this device.</div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <div class="section-intro">
+        <h2>Advanced automation</h2>
+        <p>Pro adds finer schedules and a quiet-hours window so optimization never runs during your chosen period.</p>
+      </div>
+      <div class="setting-list">
+        <div class="setting-row">
+          <div>
+            <strong>Auto-suspend interval</strong>
+            <span id="suspendSummary">Free intervals are available now. Pro unlocks 5 minutes through 24 hours.</span>
+          </div>
+          <select id="suspendSelect" aria-label="Auto-suspend interval">
+            <option value="0">Use mode default</option>
+            <option value="5">5 minutes · Pro</option>
+            <option value="10">10 minutes · Pro</option>
+            <option value="15">15 minutes · Pro</option>
+            <option value="30">30 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="120">2 hours</option>
+            <option value="180">3 hours · Pro</option>
+            <option value="360">6 hours · Pro</option>
+            <option value="720">12 hours · Pro</option>
+            <option value="1440">24 hours · Pro</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong>Quiet hours</strong>
+            <span>Pause automatic optimization during this window. Manual Optimize now still works.</span>
+          </div>
+          <label class="time-controls">
+            <input id="quietEnabled" type="checkbox" />
+            <input id="quietStart" type="time" value="22:00" aria-label="Quiet hours start" />
+            <span>to</span>
+            <input id="quietEnd" type="time" value="07:00" aria-label="Quiet hours end" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <div class="section-intro">
+        <h2>Performance history</h2>
+        <p>Pro keeps a local rolling history of memory pressure and optimization activity.</p>
+      </div>
+      <div class="history-card">
+        <div><strong id="historyPeak">—</strong><span>Peak used</span></div>
+        <div><strong id="historyAverage">—</strong><span>Average used</span></div>
+        <div><strong id="historyPoints">0</strong><span>Snapshots</span></div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <div class="section-intro">
+        <h2>Session snapshots</h2>
+        <p>Save important tab sets and restore them later without losing your current tabs.</p>
+      </div>
+      <div class="snapshot-box">
+        <form id="snapshotForm" class="protect-form">
+          <input id="snapshotName" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Work morning" aria-label="Snapshot name" />
+          <button type="submit">Save snapshot</button>
+        </form>
+        <div id="snapshotEmpty" class="empty-state">No snapshots saved.</div>
+        <ul id="snapshotList" class="protected-list"></ul>
       </div>
     </section>
 
@@ -69,6 +171,13 @@
       <div class="action-list">
         <div class="action-row">
           <div>
+            <strong>Restore sleeping tabs</strong>
+            <span>Reload all currently suspended tabs without closing them.</span>
+          </div>
+          <button id="restoreTabsButton" class="secondary-button" type="button">Restore</button>
+        </div>
+        <div class="action-row">
+          <div>
             <strong>Sleep duplicate tabs</strong>
             <span>Keep the most recently used copy active and unload older duplicates.</span>
           </div>
@@ -87,10 +196,10 @@
     <section class="settings-section privacy-section">
       <div class="section-intro">
         <h2>Privacy</h2>
-        <p>There is no account, server, telemetry SDK, or browsing-history upload. Settings stay in Chrome's local extension storage.</p>
+        <p>The free plan has no account, telemetry SDK, or browsing-history upload. Pro only uses a signed license token; billing happens on the separate billing website.</p>
       </div>
       <div class="privacy-note">
-        RamOptimizer requests tab metadata so it can determine which tabs are safe to unload. It does not inject scripts into websites or read page content.
+        Browser Performance Manager requests tab metadata so it can determine which tabs are safe to unload. It does not inject scripts into websites or read page content.
       </div>
     </section>
 
@@ -99,6 +208,7 @@
       <span>Manifest V3 · dependency-free</span>
     </footer>
   </main>
+  <script src="premium-config.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

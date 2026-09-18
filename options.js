@@ -10,7 +10,7 @@ const modeDescriptions = {
 
 async function send(type, payload = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
-  if (!response?.ok) throw new Error(response?.error || 'RamOptimizer could not complete that action.');
+  if (!response?.ok) throw new Error(response?.error || 'Browser Performance Manager could not complete that action.');
   return response;
 }
 
@@ -29,10 +29,12 @@ function setStatus(text, kind = '') {
 
 function render(data) {
   state = data;
-  const { settings } = data;
+  const { settings, entitlement } = data;
 
   $('#enabledToggle').setAttribute('aria-checked', String(settings.enabled));
   $('#modeSelect').value = settings.mode;
+  $('#suspendSelect').value = String(settings.autoSuspendMinutes);
+  renderPro(data);
   $('#modeSummary').textContent = modeDescriptions[settings.mode];
 
   const list = $('#protectedList');
@@ -116,6 +118,22 @@ $('#protectForm').addEventListener('submit', async (event) => {
   }
 });
 
+$('#restoreTabsButton').addEventListener('click', async () => {
+  const button = $('#restoreTabsButton');
+  button.disabled = true;
+  button.textContent = 'Restoring…';
+  try {
+    const response = await send('RESTORE_DISCARDED');
+    setStatus(response.restored ? `${response.restored} sleeping tabs restored` : 'No sleeping tabs to restore', 'success');
+    await refresh();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Restore';
+  }
+});
+
 $('#duplicatesButton').addEventListener('click', async () => {
   const button = $('#duplicatesButton');
   button.disabled = true;
@@ -148,3 +166,173 @@ $('#resetStatsButton').addEventListener('click', async () => {
 });
 
 refresh();
+
+
+function formatExpiry(timestamp) {
+  if (!timestamp) return '';
+  return new Date(timestamp * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function renderPro(data) {
+  const { settings, entitlement } = data;
+  const active = Boolean(entitlement?.active);
+  $('#proStatus').textContent = active
+    ? `Pro active · renews/expires ${formatExpiry(entitlement.expiresAt)}`
+    : 'Free plan';
+  $('#proStatus').className = `pro-status${active ? ' active' : ''}`;
+  $('#manageProButton').hidden = !active;
+  $('#deactivateLicenseButton').hidden = !active;
+  $('#buyProButton').textContent = active ? 'Pro active' : 'Get Pro';
+
+  const proValues = new Set(['5', '10', '360', '720', '1440']);
+  [...$('#suspendSelect').options].forEach((option) => {
+    option.disabled = proValues.has(option.value) && !active;
+  });
+  $('#suspendSummary').textContent = active
+    ? 'Pro is active: choose any interval from 5 minutes to 24 hours.'
+    : 'Free: 15 minutes to 3 hours. Pro adds 5, 10, 6-hour, 12-hour and 24-hour schedules.';
+  $('#quietEnabled').checked = Boolean(settings.quietHours?.enabled);
+  $('#quietStart').value = settings.quietHours?.start || '22:00';
+  $('#quietEnd').value = settings.quietHours?.end || '07:00';
+  $('#quietEnabled').disabled = !active;
+  $('#quietStart').disabled = !active;
+  $('#quietEnd').disabled = !active;
+
+  const history = active ? (settings.performanceHistory || []) : [];
+  $('#historyPoints').textContent = active ? history.length : 'Pro';
+  if (history.length) {
+    const values = history.map((point) => Number(point.usedPercent) || 0);
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    $('#historyPeak').textContent = `${Math.max(...values).toFixed(1)}%`;
+    $('#historyAverage').textContent = `${average.toFixed(1)}%`;
+  } else {
+    $('#historyPeak').textContent = active ? '—' : 'Pro';
+    $('#historyAverage').textContent = active ? '—' : 'Pro';
+  }
+
+  const snapshots = active ? (settings.snapshots || []) : [];
+  const list = $('#snapshotList');
+  list.textContent = '';
+  $('#snapshotEmpty').hidden = snapshots.length > 0;
+  list.hidden = snapshots.length === 0;
+  $('#snapshotName').disabled = !active;
+  $('#snapshotForm button').disabled = !active;
+  snapshots.slice().reverse().forEach((snapshot) => {
+    const item = document.createElement('li');
+    const label = document.createElement('span');
+    label.textContent = `${snapshot.name} · ${snapshot.tabs.length} tabs`;
+    const actions = document.createElement('span');
+    actions.className = 'snapshot-actions';
+    const restore = document.createElement('button');
+    restore.textContent = 'Restore';
+    restore.type = 'button';
+    restore.addEventListener('click', () => runSnapshotAction('RESTORE_SNAPSHOT', snapshot.id));
+    const remove = document.createElement('button');
+    remove.textContent = 'Delete';
+    remove.type = 'button';
+    remove.addEventListener('click', () => runSnapshotAction('DELETE_SNAPSHOT', snapshot.id));
+    actions.append(restore, remove);
+    item.append(label, actions);
+    list.append(item);
+  });
+}
+
+async function refreshPro() {
+  await refresh();
+}
+
+$('#suspendSelect').addEventListener('change', async (event) => {
+  try {
+    await send('SET_AUTO_SUSPEND', { minutes: Number(event.target.value) });
+    setStatus('Suspension interval saved', 'success');
+    await refreshPro();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+});
+
+async function saveQuietHours() {
+  try {
+    await send('SET_QUIET_HOURS', {
+      quietHours: {
+        enabled: $('#quietEnabled').checked,
+        start: $('#quietStart').value,
+        end: $('#quietEnd').value
+      }
+    });
+    setStatus('Quiet hours saved', 'success');
+    await refreshPro();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+}
+
+$('#quietEnabled').addEventListener('change', saveQuietHours);
+$('#quietStart').addEventListener('change', saveQuietHours);
+$('#quietEnd').addEventListener('change', saveQuietHours);
+
+$('#buyProButton').addEventListener('click', () => {
+  if (typeof BPM_BILLING_URL === 'string' && BPM_BILLING_URL) {
+    chrome.tabs.create({ url: BPM_BILLING_URL });
+  } else {
+    setStatus('Billing is not configured yet. Connect your Stripe checkout to BPM_BILLING_URL.', 'error');
+  }
+});
+
+$('#manageProButton').addEventListener('click', () => {
+  if (typeof BPM_BILLING_URL === 'string' && BPM_BILLING_URL) {
+    chrome.tabs.create({ url: BPM_BILLING_URL });
+  } else {
+    setStatus('Billing is not configured yet.', 'error');
+  }
+});
+
+$('#activateLicenseButton').addEventListener('click', async () => {
+  const token = $('#licenseInput').value.trim();
+  if (!token) {
+    setStatus('Paste your Pro license first.', 'error');
+    return;
+  }
+  try {
+    await send('ACTIVATE_LICENSE', { token });
+    $('#licenseInput').value = '';
+    setStatus('Pro activated on this device.', 'success');
+    await refreshPro();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+});
+
+$('#deactivateLicenseButton').addEventListener('click', async () => {
+  try {
+    await send('DEACTIVATE_LICENSE');
+    setStatus('Pro deactivated on this device.', 'success');
+    await refreshPro();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+});
+
+$('#snapshotForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const name = $('#snapshotName').value.trim();
+  if (!name) return;
+  try {
+    await send('SAVE_SNAPSHOT', { name });
+    $('#snapshotName').value = '';
+    setStatus('Snapshot saved.', 'success');
+    await refreshPro();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+});
+
+async function runSnapshotAction(type, id) {
+  try {
+    const response = await send(type, { id });
+    setStatus(type === 'RESTORE_SNAPSHOT' ? `${response.created} tabs restored.` : 'Snapshot deleted.', 'success');
+    await refreshPro();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+}

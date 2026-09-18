@@ -1,13 +1,16 @@
-# RamOptimizer
+# Browser Performance Manager
 
 A lightweight Chrome extension for MacBooks, laptops, and desktops that keeps Chrome responsive by watching real system memory pressure and safely unloading inactive tabs.
 
-RamOptimizer does **not** pretend to clear macOS or Windows RAM directly. It uses Chrome's supported extension APIs to make better tab-management decisions and lets Chrome reclaim the resources from tabs it safely discards.
+Browser Performance Manager does **not** pretend to clear macOS or Windows RAM directly. It uses Chrome's supported extension APIs to make better tab-management decisions and lets Chrome reclaim the resources from tabs it safely discards.
 
-## What V1 does
+## What V2 does
 
 - Reads real physical-memory capacity and available memory with `chrome.system.memory`.
 - Checks memory pressure every two minutes with a Manifest V3 service worker.
+- Automatically suspends safe inactive tabs after a configurable inactivity interval.
+- Shows tab-pressure candidates, including inactivity age and duplicate-tab signals.
+- Reports before/after system memory readings after each optimization run.
 - Uses Balanced, Smart, and Maximum Saver policies.
 - Scores inactive tabs using age, duplicate URLs, tab groups, and safety state.
 - Never intentionally unloads active, pinned, audible, loading, non-discardable, internal, or user-protected tabs.
@@ -16,16 +19,16 @@ RamOptimizer does **not** pretend to clear macOS or Windows RAM directly. It use
 - Per-site protection from the popup and settings page.
 - Duplicate-tab sleeper that unloads older duplicate copies without closing them.
 - Local-only statistics and settings.
-- No framework, cloud backend, analytics SDK, content injection, or page tracking.
+- No framework, analytics SDK, content injection, or page tracking. The free plan works locally; Pro billing is handled separately by the optional billing service.
 
 ## Download from GitHub Actions
 
 Every push to `main` creates a downloadable extension artifact automatically.
 
 1. Open the repository's **Actions** tab.
-2. Open the latest successful **Build RamOptimizer** run.
+2. Open the latest successful **Build Browser Performance Manager** run.
 3. Scroll to **Artifacts**.
-4. Download `RamOptimizer-v1.0.0` (the version number follows `manifest.json`).
+4. Download `BrowserPerformanceManager-v2.1.0` (the version number follows `manifest.json`).
 5. Unzip the downloaded artifact.
 6. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the unzipped folder containing `manifest.json`.
 
@@ -33,7 +36,7 @@ The workflow validates the manifest and JavaScript syntax before publishing the 
 
 ## Versioned releases
 
-Pushing a Git tag such as `v1.0.0` runs the same validation and automatically creates a GitHub Release containing `RamOptimizer-v1.0.0.zip`.
+Pushing a Git tag such as `v2.0.0` runs the same validation and automatically creates a GitHub Release containing `BrowserPerformanceManager-v2.0.0.zip`.
 
 ## Install locally
 
@@ -42,7 +45,7 @@ Pushing a Git tag such as `v1.0.0` runs the same validation and automatically cr
 3. Enable **Developer mode**.
 4. Click **Load unpacked**.
 5. Select the repository folder containing `manifest.json`.
-6. Pin **RamOptimizer** from Chrome's Extensions menu.
+6. Pin **Browser Performance Manager** from Chrome's Extensions menu.
 
 The extension is designed to work directly from the repository; there is no build command.
 
@@ -63,7 +66,7 @@ Manual **Optimize now** remains conservative about active/pinned/audio/protected
 - `storage` — saves extension preferences and local statistics.
 - `alarms` — schedules low-overhead memory checks while Chrome is running.
 
-RamOptimizer has no host permissions and does not inject scripts into websites.
+Browser Performance Manager has no host permissions and does not inject scripts into websites.
 
 ## Architecture
 
@@ -78,6 +81,12 @@ RamOptimizer has no host permissions and does not inject scripts into websites.
 
 A tab is excluded from optimization when it is active, pinned, audible, currently loading, already discarded, marked non-discardable by Chrome, not an HTTP(S) page, or matches a protected hostname. Tab state can change between scoring and discard, so every discard is also wrapped defensively and failed candidates are skipped.
 
-## Next useful additions
+## Free vs Pro\n\nThe free Chrome Web Store edition is intentionally useful on its own:\n\n- System memory dashboard\n- Automatic and manual tab suspension\n- Balanced, Smart, and Maximum Saver modes\n- 15-minute through 3-hour built-in schedules\n- Up to 3 protected websites\n- Duplicate-tab cleanup\n- Local statistics\n\n**Browser Performance Manager Pro** adds:\n\n- 5-minute, 10-minute, 6-hour, 12-hour, and 24-hour custom schedules\n- Quiet hours\n- Unlimited protected websites\n- Local performance history\n- Session snapshots and restore\n- Turbo Saver cycles that can unload more safe tabs per run\n\nPro licensing uses signed, offline-verifiable tokens so the extension does not need broad host permissions just to check entitlement.\n\n## Billing architecture\n\nStripe is the planned payment provider. The repository includes a separate server/ billing service that creates Stripe Checkout subscriptions and issues signed Pro licenses after verifying the completed Checkout Session and active subscription. Stripe documents server-created Checkout Sessions and its hosted customer portal for subscription management.\n\nBefore publishing the paid experience, generate a production RSA key pair, keep the private key only on the billing server, replace the public-key placeholder in premium.js, set the real billing URL in premium-config.js, and publish the billing service over HTTPS.\n\nChrome Web Store rules require paid functionality and seller information to be clearly disclosed, and payment information must be handled securely.\n\n## Store readiness checklist\n\n- [ ] Replace the Pro public-key placeholder.\n- [ ] Configure Stripe live mode and recurring Pro price.\n- [ ] Deploy server/ over HTTPS.\n- [ ] Configure Stripe webhook signing secret.\n- [ ] Set BPM_BILLING_URL.\n- [ ] Replace placeholder seller/refund/support details in STORE_LISTING.md.\n- [ ] Complete the Chrome Web Store Privacy tab accurately.\n- [ ] Run the packaged extension in Chrome and test free + Pro flows with Stripe test mode before switching to live mode.\n\n## Next useful additions
 
 Future versions can add workspace-aware protection, optional conservative request blocking, richer pressure history, and a native companion if true per-process macOS memory statistics are ever needed. Those features should stay optional so the optimizer itself remains lightweight.
+
+## Product scope
+
+This extension manages browser tabs; it does not directly "clear" system RAM. Chrome's stable extension APIs expose system memory and tab discard state, but do not expose a reliable per-tab RAM figure. For that reason the UI calls the tab list **Tab pressure** rather than claiming an exact memory number per tab. The manager uses safe signals such as inactivity age, duplicate URLs, tab state, and protection rules to decide which tabs are candidates.
+
+Chrome's tab discard API keeps a discarded tab visible and reloads its content when the user activates it. 

@@ -27,7 +27,7 @@ function relativeTime(timestamp) {
 
 async function send(type, payload = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
-  if (!response?.ok) throw new Error(response?.error || 'RamOptimizer could not complete that action.');
+  if (!response?.ok) throw new Error(response?.error || 'Browser Performance Manager could not complete that action.');
   return response;
 }
 
@@ -45,7 +45,7 @@ function setResult(message, kind = '') {
 
 function render(data) {
   dashboard = data;
-  const { settings, memory, tabs, currentSite } = data;
+  const { settings, memory, tabs, currentSite, tabCandidates, entitlement } = data;
 
   $('#powerToggle').setAttribute('aria-checked', String(settings.enabled));
   $('#statusText').textContent = settings.enabled ? 'Automatic optimization is on' : 'Automatic optimization is off';
@@ -74,12 +74,39 @@ function render(data) {
     button.setAttribute('aria-checked', String(active));
   });
   $('#modeDescription').textContent = modeCopy[settings.mode];
+  const proActive = Boolean(entitlement?.active);
+  $('#proCard').classList.toggle('active', proActive);
+  $('#proTitle').textContent = proActive ? 'Pro is active' : 'Unlock Pro controls';
+  $('#proSummary').textContent = proActive
+    ? 'Advanced automation and session tools are enabled.'
+    : 'Custom schedules, quiet hours, unlimited protection and session snapshots.';
+  $('#proButton').textContent = proActive ? 'Manage Pro' : 'View Pro';
 
   $('#currentHost').textContent = currentSite.host || 'Browser page';
   $('#protectButton').disabled = !currentSite.host;
   $('#protectButton').textContent = currentSite.protected ? 'Unprotect' : 'Protect';
 
   $('#lastRun').textContent = relativeTime(settings.lastResult?.timestamp);
+  const tabList = $('#tabList');
+  tabList.textContent = '';
+  (tabCandidates || []).slice(0, 5).forEach((item) => {
+    const row = document.createElement('div');
+    row.className = 'tab-item';
+    const title = document.createElement('strong');
+    title.textContent = item.title || item.host || 'Untitled tab';
+    const meta = document.createElement('span');
+    meta.textContent = item.discarded ? 'Suspended' : item.reason;
+    const age = document.createElement('small');
+    age.textContent = item.ageMinutes > 0 ? `${item.ageMinutes}m inactive` : 'Recently used';
+    row.append(title, meta, age);
+    tabList.append(row);
+  });
+  if (!(tabCandidates || []).length) {
+    const empty = document.createElement('div');
+    empty.className = 'tab-empty';
+    empty.textContent = 'No inactive tabs need attention right now.';
+    tabList.append(empty);
+  }
 }
 
 async function refresh() {
@@ -102,7 +129,7 @@ $('#powerToggle').addEventListener('click', async () => {
   }
 });
 
-$$('.segmented button').forEach((button) => {
+$('.segmented button').forEach((button) => {
   button.addEventListener('click', async () => {
     if (busy || !dashboard || button.dataset.mode === dashboard.settings.mode) return;
     try {
@@ -123,9 +150,16 @@ $('#optimizeButton').addEventListener('click', async () => {
   try {
     const response = await send('RUN_OPTIMIZATION');
     const count = response.discarded?.length || 0;
+    const delta = Number(response.result?.memoryDeltaBytes || 0);
+    const deltaText = delta > 0 ? `${bytesToGiB(delta)} released` : '';
+    const before = Number(response.result?.beforeUsedPercent);
+    const after = Number(response.result?.afterUsedPercent);
+    const memoryText = Number.isFinite(before) && Number.isFinite(after) && before !== after
+      ? ` · memory ${before.toFixed(1)}% → ${after.toFixed(1)}%`
+      : '';
     setResult(
       count
-        ? `${count} inactive ${count === 1 ? 'tab' : 'tabs'} unloaded. Chrome reloads them when you return.`
+        ? `${count} inactive ${count === 1 ? 'tab' : 'tabs'} unloaded${deltaText ? ' · ' + deltaText : ''}${memoryText}. Chrome reloads them when you return.`
         : response.result?.message || 'Nothing needed to be unloaded.',
       count ? 'success' : ''
     );
@@ -155,3 +189,5 @@ refresh();
 setInterval(() => {
   if (!busy) refresh();
 }, 5000);
+
+$('#proButton').addEventListener('click', () => chrome.runtime.openOptionsPage());

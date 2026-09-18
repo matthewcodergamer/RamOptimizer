@@ -161,3 +161,20 @@ button { -webkit-tap-highlight-color: transparent; }
 .footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .footer button { flex: 0 0 auto; padding: 0; border: 0; background: none; color: #4d5550; font-size: 10.5px; font-weight: 620; cursor: pointer; }
 .footer button:hover { color: var(--green-dark); }
+
+.tab-section { margin-top: 14px; }
+.tab-list { display: grid; gap: 6px; }
+.tab-item { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.tab-item strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.8px; font-weight: 620; }
+.tab-item span { color: var(--amber); font-size: 9.5px; font-weight: 600; }
+.tab-item small { grid-column: 1 / -1; color: var(--muted); font-size: 9.5px; }
+.tab-empty { padding: 9px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 9.8px; text-align: center; }
+
+
+.pro-card { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; padding:11px 12px; border:1px solid #d8e2dc; border-radius:10px; background:#f4f8f5; }
+.pro-card > div { min-width:0; display:grid; gap:2px; }
+.pro-card strong { font-size:11.5px; font-weight:680; }
+.pro-card #proSummary { color:var(--muted); font-size:9.5px; line-height:1.35; }
+.pro-button { flex:0 0 auto; height:30px; padding:0 10px; border:1px solid var(--green-dark); border-radius:7px; background:var(--green); color:#fff; font-size:10px; font-weight:680; cursor:pointer; }
+.pro-button:hover { background:var(--green-dark); }
+.pro-card.active { background:#edf7f1; border-color:#bddbc9; }

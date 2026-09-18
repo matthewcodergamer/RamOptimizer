@@ -1,10 +1,17 @@
-const STORAGE_KEY = 'ramOptimizerSettings';
-const ALARM_NAME = 'ram-optimizer-memory-check';
+importScripts('premium.js');
+
+const STORAGE_KEY = 'browserPerformanceManagerSettings';
+const ALARM_NAME = 'browser-performance-memory-check';
 
 const DEFAULTS = Object.freeze({
   enabled: true,
   mode: 'smart',
+  autoSuspendMinutes: 60,
+  quietHours: { enabled: false, start: '22:00', end: '07:00' },
   protectedHosts: [],
+  performanceHistory: [],
+  snapshots: [],
+  licenseToken: '',
   stats: {
     cycles: 0,
     tabsDiscarded: 0,
@@ -42,13 +49,20 @@ function normalizeSettings(value) {
     ...DEFAULTS,
     ...raw,
     mode: MODES[raw.mode] ? raw.mode : DEFAULTS.mode,
+    autoSuspendMinutes: Number.isFinite(Number(raw.autoSuspendMinutes)) && Number(raw.autoSuspendMinutes) >= 0
+      ? Math.min(1440, Math.max(0, Number(raw.autoSuspendMinutes)))
+      : DEFAULTS.autoSuspendMinutes,
+    quietHours: normalizeQuietHours(raw.quietHours),
     protectedHosts: Array.isArray(raw.protectedHosts)
       ? [...new Set(raw.protectedHosts.map(normalizeHost).filter(Boolean))]
       : [],
     stats: {
       ...DEFAULTS.stats,
       ...stats
-    }
+    },
+    performanceHistory: Array.isArray(raw.performanceHistory) ? raw.performanceHistory.slice(-720) : [],
+    snapshots: Array.isArray(raw.snapshots) ? raw.snapshots.slice(-10) : [],
+    licenseToken: typeof raw.licenseToken === 'string' ? raw.licenseToken : ''
   };
 }
 
@@ -66,6 +80,44 @@ async function setSettings(next) {
 async function patchSettings(patch) {
   const current = await getSettings();
   return setSettings({ ...current, ...patch });
+}
+
+function normalizeQuietHours(value) {
+  const raw = value && typeof value === 'object' ? value : {};
+  const validTime = (input, fallback) => /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(String(input || ''))
+    ? String(input)
+    : fallback;
+  return {
+    enabled: Boolean(raw.enabled),
+    start: validTime(raw.start, '22:00'),
+    end: validTime(raw.end, '07:00')
+  };
+}
+
+function minutesSinceMidnight(value) {
+  const [hours, minutes] = String(value).split(':').map(Number);
+  return (hours * 60) + minutes;
+}
+
+function isWithinQuietHours(quietHours, now = new Date()) {
+  if (!quietHours?.enabled) return false;
+  const current = now.getHours() * 60 + now.getMinutes();
+  const start = minutesSinceMidnight(quietHours.start);
+  const end = minutesSinceMidnight(quietHours.end);
+  if (start === end) return true;
+  return start < end ? current >= start && current < end : current >= start || current < end;
+}
+
+async function getEntitlement(settings = null) {
+  const current = settings || await getSettings();
+  if (!current.licenseToken) return { active: false, reason: 'none' };
+  return verifyPremiumToken(current.licenseToken);
+}
+
+async function requirePro(settings = null) {
+  const entitlement = await getEntitlement(settings);
+  if (!entitlement.active) throw new Error('This is a Pro feature. Activate Browser Performance Manager Pro in Settings.');
+  return entitlement;
 }
 
 function normalizeHost(input) {
@@ -186,7 +238,8 @@ async function buildCandidates(settings, manual = false) {
     [...frequency.entries()].filter(([, count]) => count > 1).map(([url]) => url)
   );
 
-  const minimumAge = manual ? Math.min(mode.minimumAgeMinutes, 30) : mode.minimumAgeMinutes;
+  const configuredAge = settings.autoSuspendMinutes === 0 ? mode.minimumAgeMinutes : settings.autoSuspendMinutes;
+  const minimumAge = manual ? Math.min(configuredAge, 30) : configuredAge;
 
   return tabs
     .filter((tab) => !isNeverDiscard(tab, settings))
@@ -199,10 +252,10 @@ async function buildCandidates(settings, manual = false) {
     .sort((a, b) => b.score - a.score);
 }
 
-function chooseDiscardCount(memory, mode, manual, candidateCount) {
+function chooseDiscardCount(memory, mode, manual, candidateCount, autoSuspendMinutes) {
   if (!candidateCount) return 0;
   if (manual) return Math.min(mode.maxPerCycle, candidateCount);
-  if (memory.usedPercent < mode.triggerPercent) return 0;
+  if (autoSuspendMinutes === 0 && memory.usedPercent < mode.triggerPercent) return 0;
 
   const pressureOverage = Math.max(0, memory.usedPercent - mode.triggerPercent);
   const desired = 1 + Math.floor(pressureOverage / 3);
@@ -233,29 +286,48 @@ async function discardCandidates(candidates, count) {
 
 async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
   const settings = await getSettings();
+  const entitlement = await getEntitlement(settings);
   const memory = await getMemorySnapshot();
   const mode = MODES[settings.mode];
+
+  if (!manual && isWithinQuietHours(settings.quietHours)) {
+    return { ok: true, skipped: true, skipReason: 'quiet-hours', memory, discarded: [] };
+  }
 
   if (!settings.enabled && !manual) {
     return { ok: true, skipped: true, skipReason: 'disabled', memory, discarded: [] };
   }
 
   const candidates = await buildCandidates(settings, manual);
-  const discardCount = chooseDiscardCount(memory, mode, manual, candidates.length);
+  const maxPerCycle = entitlement.active ? 25 : mode.maxPerCycle;
+  const discardCount = Math.min(
+    chooseDiscardCount(memory, mode, manual, candidates.length, settings.autoSuspendMinutes),
+    maxPerCycle
+  );
 
   if (discardCount === 0) {
+    const history = [...settings.performanceHistory, {
+      timestamp: Date.now(),
+      usedPercent: memory.usedPercent,
+      available: memory.available,
+      capacity: memory.capacity,
+      discarded: 0
+    }].slice(-720);
     const result = {
       timestamp: Date.now(),
       reason,
       discarded: 0,
       beforeUsedPercent: memory.usedPercent,
-      message: memory.usedPercent < mode.triggerPercent && !manual
+      afterUsedPercent: memory.usedPercent,
+      memoryDeltaBytes: 0,
+      message: memory.usedPercent < mode.triggerPercent && !manual && settings.autoSuspendMinutes === 0
         ? 'Memory pressure is below the current trigger.'
         : 'No safe inactive tabs are old enough to unload.'
     };
 
     await setSettings({
       ...settings,
+      performanceHistory: entitlement.active ? history : settings.performanceHistory,
       stats: {
         ...settings.stats,
         cycles: settings.stats.cycles + (manual ? 0 : 1),
@@ -268,18 +340,30 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
   }
 
   const discarded = await discardCandidates(candidates, discardCount);
+  const afterMemory = await getMemorySnapshot();
   const result = {
     timestamp: Date.now(),
     reason,
     discarded: discarded.length,
     beforeUsedPercent: memory.usedPercent,
+    afterUsedPercent: afterMemory.usedPercent,
+    memoryDeltaBytes: memory.used - afterMemory.used,
     message: discarded.length
       ? `${discarded.length} inactive ${discarded.length === 1 ? 'tab was' : 'tabs were'} unloaded.`
       : 'Chrome kept all candidate tabs active.'
   };
 
+  const history = [...settings.performanceHistory, {
+    timestamp: Date.now(),
+    usedPercent: memory.usedPercent,
+    available: memory.available,
+    capacity: memory.capacity,
+    discarded: discarded.length
+  }].slice(-48);
+
   await setSettings({
     ...settings,
+    performanceHistory: entitlement.active ? history : settings.performanceHistory,
     stats: {
       ...settings.stats,
       cycles: settings.stats.cycles + (manual ? 0 : 1),
@@ -289,7 +373,7 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
     lastResult: result
   });
 
-  return { ok: true, memory, discarded, result };
+  return { ok: true, memory, afterMemory, discarded, result };
 }
 
 async function sleepDuplicateTabs() {
@@ -349,12 +433,26 @@ async function sleepDuplicateTabs() {
   return { ok: true, discarded: discarded.length };
 }
 
+async function getTabPressureCandidates(settings) {
+  const candidates = await buildCandidates(settings, false);
+  return candidates.slice(0, 5).map(({ tab, ageMinutes: inactiveMinutes, score }) => ({
+    id: tab.id,
+    title: tab.title || hostFromUrl(tab.url || '') || 'Untitled tab',
+    host: hostFromUrl(tab.url || ''),
+    ageMinutes: inactiveMinutes,
+    discarded: Boolean(tab.discarded),
+    reason: tab.discarded ? 'Suspended' : score >= 90 ? 'High pressure' : 'Inactive'
+  }));
+}
+
 async function getDashboard() {
   const settings = await getSettings();
-  const [memory, tabs, activeTabs] = await Promise.all([
+  const entitlement = await getEntitlement(settings);
+  const [memory, tabs, activeTabs, tabCandidates] = await Promise.all([
     getMemorySnapshot(),
     getTabsSnapshot(settings),
-    chrome.tabs.query({ active: true, currentWindow: true })
+    chrome.tabs.query({ active: true, currentWindow: true }),
+    getTabPressureCandidates(settings)
   ]);
 
   const active = activeTabs[0];
@@ -364,7 +462,12 @@ async function getDashboard() {
     settings,
     modeConfig: MODES[settings.mode],
     memory,
+    entitlement: {
+      active: Boolean(entitlement.active),
+      expiresAt: entitlement.expiresAt || 0
+    },
     tabs,
+    tabCandidates,
     currentSite: {
       host: currentHost,
       protected: hostIsProtected(currentHost, settings.protectedHosts)
@@ -442,6 +545,86 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return { ok: true, settings };
       }
 
+      case 'SET_AUTO_SUSPEND': {
+        const minutes = Number(message.minutes);
+        const entitlement = await getEntitlement();
+        const freeValues = [0, 15, 30, 60, 120, 180];
+        if (!entitlement.active && !freeValues.includes(minutes)) {
+          throw new Error('Custom suspension intervals are a Pro feature.');
+        }
+        if (!Number.isFinite(minutes) || minutes < 0 || minutes > 1440) {
+          throw new Error('Choose an interval from 5 minutes to 24 hours.');
+        }
+        const settings = await patchSettings({ autoSuspendMinutes: minutes });
+        return { ok: true, settings };
+      }
+
+      case 'SET_QUIET_HOURS': {
+        await requirePro();
+        const quietHours = normalizeQuietHours(message.quietHours);
+        return { ok: true, settings: await patchSettings({ quietHours }) };
+      }
+
+      case 'ACTIVATE_LICENSE': {
+        const token = typeof message.token === 'string' ? message.token.trim() : '';
+        const entitlement = await verifyPremiumToken(token);
+        if (!entitlement.active) {
+          throw new Error(entitlement.reason === 'expired'
+            ? 'That Pro license has expired.'
+            : entitlement.reason === 'none'
+              ? 'Enter your Pro license.'
+              : 'That Pro license could not be verified.');
+        }
+        const settings = await patchSettings({ licenseToken: token });
+        return { ok: true, entitlement, settings };
+      }
+
+      case 'DEACTIVATE_LICENSE': {
+        const settings = await patchSettings({ licenseToken: '' });
+        return { ok: true, settings, entitlement: { active: false } };
+      }
+
+      case 'SAVE_SNAPSHOT': {
+        await requirePro();
+        const name = String(message.name || '').trim().slice(0, 60);
+        if (!name) throw new Error('Give the snapshot a name.');
+        const tabs = await chrome.tabs.query({});
+        const urls = tabs
+          .filter((tab) => typeof tab.url === 'string' && (tab.url.startsWith('https://') || tab.url.startsWith('http://')))
+          .map((tab) => ({ url: tab.url, title: tab.title || '' }));
+        if (!urls.length) throw new Error('There are no restorable web tabs in this window.');
+        const settings = await getSettings();
+        const snapshots = [...settings.snapshots, {
+          id: crypto.randomUUID(),
+          name,
+          createdAt: Date.now(),
+          tabs: urls.slice(0, 200)
+        }].slice(-10);
+        return { ok: true, settings: await patchSettings({ snapshots }) };
+      }
+
+      case 'RESTORE_SNAPSHOT': {
+        await requirePro();
+        const id = String(message.id || '');
+        const settings = await getSettings();
+        const snapshot = settings.snapshots.find((item) => item.id === id);
+        if (!snapshot) throw new Error('Snapshot not found.');
+        const created = [];
+        for (const tab of snapshot.tabs) {
+          try {
+            created.push(await chrome.tabs.create({ url: tab.url, active: false }));
+          } catch (_) {}
+        }
+        return { ok: true, created: created.length };
+      }
+
+      case 'DELETE_SNAPSHOT': {
+        await requirePro();
+        const settings = await getSettings();
+        const snapshots = settings.snapshots.filter((item) => item.id !== String(message.id || ''));
+        return { ok: true, settings: await patchSettings({ snapshots }) };
+      }
+
       case 'SET_MODE': {
         if (!MODES[message.mode]) throw new Error('Unknown optimizer mode.');
         const settings = await patchSettings({ mode: message.mode });
@@ -452,6 +635,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         const host = normalizeHost(message.host);
         if (!host) throw new Error('Enter a valid website hostname.');
         const settings = await getSettings();
+        const entitlement = await getEntitlement(settings);
+        if (!entitlement.active && !settings.protectedHosts.includes(host) && settings.protectedHosts.length >= 3) {
+          throw new Error('Free accounts can protect up to 3 websites. Pro includes unlimited protected sites.');
+        }
         const protectedHosts = [...new Set([...settings.protectedHosts, host])].sort();
         return { ok: true, settings: await patchSettings({ protectedHosts }) };
       }
@@ -465,6 +652,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
       case 'SLEEP_DUPLICATES':
         return await sleepDuplicateTabs();
+
+      case 'RESTORE_DISCARDED': {
+        const tabs = await chrome.tabs.query({ discarded: true });
+        let restored = 0;
+        for (const tab of tabs) {
+          try {
+            await chrome.tabs.reload(tab.id);
+            restored += 1;
+          } catch (_) {}
+        }
+        return { ok: true, restored };
+      }
+
+      case 'GET_PRO_STATUS': {
+        const settings = await getSettings();
+        return { ok: true, entitlement: await getEntitlement(settings) };
+      }
 
       case 'RESET_STATS': {
         const settings = await getSettings();
@@ -483,7 +687,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
   })()
     .then(sendResponse)
-    .catch((error) => sendResponse({ ok: false, error: error?.message || 'RamOptimizer error.' }));
+    .catch((error) => sendResponse({ ok: false, error: error?.message || 'Browser Performance Manager error.' }));
 
   return true;
 });

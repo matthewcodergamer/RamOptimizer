@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "RamOptimizer",
-  "version": "1.0.0",
-  "description": "Keeps Chrome responsive by watching memory pressure and safely unloading inactive tabs.",
+  "name": "Browser Performance Manager",
+  "version": "2.1.0",
+  "description": "Keeps Chrome responsive by monitoring system memory pressure and safely suspending inactive tabs.",
   "minimum_chrome_version": "120",
   "permissions": [
     "tabs",
@@ -14,7 +14,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "RamOptimizer",
+    "default_title": "Browser Performance Manager",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/ram-16.png",
@@ -32,7 +32,7 @@
   "options_page": "options.html",
   "commands": {
     "optimize-now": {
-      "description": "Run RamOptimizer now"
+      "description": "Optimize Browser Performance Manager now"
     }
   }
 }
