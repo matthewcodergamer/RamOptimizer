@@ -132,10 +132,6 @@ $('#powerToggle').addEventListener('click', async () => {
 $('.segmented button').forEach((button) => {
   button.addEventListener('click', async () => {
     if (busy || !dashboard || button.dataset.mode === dashboard.settings.mode) return;
-    if (button.dataset.mode === 'maximum' && !dashboard.entitlement?.active) {
-      setResult('Maximum Saver is a Pro feature. Open Settings to activate Pro.', 'error');
-      return;
-    }
     try {
       await send('SET_MODE', { mode: button.dataset.mode });
       setResult('');
