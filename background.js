@@ -60,7 +60,7 @@ function normalizeSettings(value) {
       ...DEFAULTS.stats,
       ...stats
     },
-    performanceHistory: Array.isArray(raw.performanceHistory) ? raw.performanceHistory.slice(-48) : [],
+    performanceHistory: Array.isArray(raw.performanceHistory) ? raw.performanceHistory.slice(-720) : [],
     snapshots: Array.isArray(raw.snapshots) ? raw.snapshots.slice(-10) : [],
     licenseToken: typeof raw.licenseToken === 'string' ? raw.licenseToken : ''
   };
@@ -312,7 +312,7 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
       available: memory.available,
       capacity: memory.capacity,
       discarded: 0
-    }].slice(-48);
+    }].slice(-720);
     const result = {
       timestamp: Date.now(),
       reason,
