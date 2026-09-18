@@ -28,7 +28,7 @@ Every push to `main` creates a downloadable extension artifact automatically.
 1. Open the repository's **Actions** tab.
 2. Open the latest successful **Build Browser Performance Manager** run.
 3. Scroll to **Artifacts**.
-4. Download `Browser Performance Manager-v1.0.0` (the version number follows `manifest.json`).
+4. Download `Browser Performance Manager-v2.0.0` (the version number follows `manifest.json`).
 5. Unzip the downloaded artifact.
 6. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the unzipped folder containing `manifest.json`.
 
@@ -36,7 +36,7 @@ The workflow validates the manifest and JavaScript syntax before publishing the 
 
 ## Versioned releases
 
-Pushing a Git tag such as `v1.0.0` runs the same validation and automatically creates a GitHub Release containing `Browser Performance Manager-v1.0.0.zip`.
+Pushing a Git tag such as `v1.0.0` runs the same validation and automatically creates a GitHub Release containing `Browser Performance Manager-v2.0.0.zip`.
 
 ## Install locally
 
@@ -89,4 +89,4 @@ Future versions can add workspace-aware protection, optional conservative reques
 
 This extension manages browser tabs; it does not directly "clear" system RAM. Chrome's stable extension APIs expose system memory and tab discard state, but do not expose a reliable per-tab RAM figure. For that reason the UI calls the tab list **Tab pressure** rather than claiming an exact memory number per tab. The manager uses safe signals such as inactivity age, duplicate URLs, tab state, and protection rules to decide which tabs are candidates.
 
-Chrome's tab discard API keeps a discarded tab visible and reloads its content when the user activates it. citeturn1search4
+Chrome's tab discard API keeps a discarded tab visible and reloads its content when the user activates it. 
