@@ -28,7 +28,7 @@ Every push to `main` creates a downloadable extension artifact automatically.
 1. Open the repository's **Actions** tab.
 2. Open the latest successful **Build Browser Performance Manager** run.
 3. Scroll to **Artifacts**.
-4. Download `BrowserPerformanceManager-v2.0.0` (the version number follows `manifest.json`).
+4. Download `BrowserPerformanceManager-v2.1.0` (the version number follows `manifest.json`).
 5. Unzip the downloaded artifact.
 6. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the unzipped folder containing `manifest.json`.
 
@@ -81,7 +81,7 @@ Browser Performance Manager has no host permissions and does not inject scripts 
 
 A tab is excluded from optimization when it is active, pinned, audible, currently loading, already discarded, marked non-discardable by Chrome, not an HTTP(S) page, or matches a protected hostname. Tab state can change between scoring and discard, so every discard is also wrapped defensively and failed candidates are skipped.
 
-## Next useful additions
+## Free vs Pro\n\nThe free Chrome Web Store edition is intentionally useful on its own:\n\n- System memory dashboard\n- Automatic and manual tab suspension\n- Balanced, Smart, and Maximum Saver modes\n- 15-minute through 3-hour built-in schedules\n- Up to 3 protected websites\n- Duplicate-tab cleanup\n- Local statistics\n\n**Browser Performance Manager Pro** adds:\n\n- 5-minute, 10-minute, 6-hour, 12-hour, and 24-hour custom schedules\n- Quiet hours\n- Unlimited protected websites\n- Local performance history\n- Session snapshots and restore\n- Turbo Saver cycles that can unload more safe tabs per run\n\nPro licensing uses signed, offline-verifiable tokens so the extension does not need broad host permissions just to check entitlement.\n\n## Billing architecture\n\nStripe is the planned payment provider. The repository includes a separate server/ billing service that creates Stripe Checkout subscriptions and issues signed Pro licenses after verifying the completed Checkout Session and active subscription. Stripe documents server-created Checkout Sessions and its hosted customer portal for subscription management.\n\nBefore publishing the paid experience, generate a production RSA key pair, keep the private key only on the billing server, replace the public-key placeholder in premium.js, set the real billing URL in premium-config.js, and publish the billing service over HTTPS.\n\nChrome Web Store rules require paid functionality and seller information to be clearly disclosed, and payment information must be handled securely.\n\n## Store readiness checklist\n\n- [ ] Replace the Pro public-key placeholder.\n- [ ] Configure Stripe live mode and recurring Pro price.\n- [ ] Deploy server/ over HTTPS.\n- [ ] Configure Stripe webhook signing secret.\n- [ ] Set BPM_BILLING_URL.\n- [ ] Replace placeholder seller/refund/support details in STORE_LISTING.md.\n- [ ] Complete the Chrome Web Store Privacy tab accurately.\n- [ ] Run the packaged extension in Chrome and test free + Pro flows with Stripe test mode before switching to live mode.\n\n## Next useful additions
 
 Future versions can add workspace-aware protection, optional conservative request blocking, richer pressure history, and a native companion if true per-process macOS memory statistics are ever needed. Those features should stay optional so the optimizer itself remains lightweight.
 
