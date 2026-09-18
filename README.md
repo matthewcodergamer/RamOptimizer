@@ -28,7 +28,7 @@ Every push to `main` creates a downloadable extension artifact automatically.
 1. Open the repository's **Actions** tab.
 2. Open the latest successful **Build Browser Performance Manager** run.
 3. Scroll to **Artifacts**.
-4. Download `Browser Performance Manager-v2.0.0` (the version number follows `manifest.json`).
+4. Download `BrowserPerformanceManager-v2.0.0` (the version number follows `manifest.json`).
 5. Unzip the downloaded artifact.
 6. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the unzipped folder containing `manifest.json`.
 
@@ -36,7 +36,7 @@ The workflow validates the manifest and JavaScript syntax before publishing the 
 
 ## Versioned releases
 
-Pushing a Git tag such as `v1.0.0` runs the same validation and automatically creates a GitHub Release containing `Browser Performance Manager-v2.0.0.zip`.
+Pushing a Git tag such as `v2.0.0` runs the same validation and automatically creates a GitHub Release containing `BrowserPerformanceManager-v2.0.0.zip`.
 
 ## Install locally
 
