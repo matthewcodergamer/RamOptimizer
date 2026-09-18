@@ -1,0 +1,4 @@
+.env
+private-license-key.pem
+public-license-key.pem
+node_modules/
