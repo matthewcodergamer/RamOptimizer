@@ -143,9 +143,11 @@ $('#optimizeButton').addEventListener('click', async () => {
   try {
     const response = await send('RUN_OPTIMIZATION');
     const count = response.discarded?.length || 0;
+    const delta = Number(response.result?.memoryDeltaBytes || 0);
+    const deltaText = delta > 0 ? `${bytesToGiB(delta)} released` : '';
     setResult(
       count
-        ? `${count} inactive ${count === 1 ? 'tab' : 'tabs'} unloaded. Chrome reloads them when you return.`
+        ? `${count} inactive ${count === 1 ? 'tab' : 'tabs'} unloaded${deltaText ? ' · ' + deltaText : ''}. Chrome reloads them when you return.`
         : response.result?.message || 'Nothing needed to be unloaded.',
       count ? 'success' : ''
     );
