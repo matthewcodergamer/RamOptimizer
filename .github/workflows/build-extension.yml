@@ -41,10 +41,22 @@ jobs:
           test -f options.html
           test -f options.js
           test -f options.css
+          test -f premium.js
+          test -f premium-config.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'))"
           node --check background.js
           node --check popup.js
           node --check options.js
+          node --check premium.js
+          node --check server/index.mjs
+
+      - name: Verify production licensing is configured for releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -q 'REPLACE_WITH_YOUR_PRODUCTION_RSA_PUBLIC_KEY' premium.js
+          test -n "${BPM_BILLING_URL:-}"
 
       - name: Create clean extension package
         shell: bash
