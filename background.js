@@ -653,6 +653,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       case 'SLEEP_DUPLICATES':
         return await sleepDuplicateTabs();
 
+      case 'RESTORE_DISCARDED': {
+        const tabs = await chrome.tabs.query({ discarded: true });
+        let restored = 0;
+        for (const tab of tabs) {
+          try {
+            await chrome.tabs.reload(tab.id);
+            restored += 1;
+          } catch (_) {}
+        }
+        return { ok: true, restored };
+      }
+
       case 'GET_PRO_STATUS': {
         const settings = await getSettings();
         return { ok: true, entitlement: await getEntitlement(settings) };
