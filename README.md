@@ -1,13 +1,16 @@
-# RamOptimizer
+# Browser Performance Manager
 
 A lightweight Chrome extension for MacBooks, laptops, and desktops that keeps Chrome responsive by watching real system memory pressure and safely unloading inactive tabs.
 
-RamOptimizer does **not** pretend to clear macOS or Windows RAM directly. It uses Chrome's supported extension APIs to make better tab-management decisions and lets Chrome reclaim the resources from tabs it safely discards.
+Browser Performance Manager does **not** pretend to clear macOS or Windows RAM directly. It uses Chrome's supported extension APIs to make better tab-management decisions and lets Chrome reclaim the resources from tabs it safely discards.
 
-## What V1 does
+## What V2 does
 
 - Reads real physical-memory capacity and available memory with `chrome.system.memory`.
 - Checks memory pressure every two minutes with a Manifest V3 service worker.
+- Automatically suspends safe inactive tabs after a configurable inactivity interval.
+- Shows tab-pressure candidates, including inactivity age and duplicate-tab signals.
+- Reports before/after system memory readings after each optimization run.
 - Uses Balanced, Smart, and Maximum Saver policies.
 - Scores inactive tabs using age, duplicate URLs, tab groups, and safety state.
 - Never intentionally unloads active, pinned, audible, loading, non-discardable, internal, or user-protected tabs.
@@ -23,9 +26,9 @@ RamOptimizer does **not** pretend to clear macOS or Windows RAM directly. It use
 Every push to `main` creates a downloadable extension artifact automatically.
 
 1. Open the repository's **Actions** tab.
-2. Open the latest successful **Build RamOptimizer** run.
+2. Open the latest successful **Build Browser Performance Manager** run.
 3. Scroll to **Artifacts**.
-4. Download `RamOptimizer-v1.0.0` (the version number follows `manifest.json`).
+4. Download `Browser Performance Manager-v1.0.0` (the version number follows `manifest.json`).
 5. Unzip the downloaded artifact.
 6. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the unzipped folder containing `manifest.json`.
 
@@ -33,7 +36,7 @@ The workflow validates the manifest and JavaScript syntax before publishing the 
 
 ## Versioned releases
 
-Pushing a Git tag such as `v1.0.0` runs the same validation and automatically creates a GitHub Release containing `RamOptimizer-v1.0.0.zip`.
+Pushing a Git tag such as `v1.0.0` runs the same validation and automatically creates a GitHub Release containing `Browser Performance Manager-v1.0.0.zip`.
 
 ## Install locally
 
@@ -42,7 +45,7 @@ Pushing a Git tag such as `v1.0.0` runs the same validation and automatically cr
 3. Enable **Developer mode**.
 4. Click **Load unpacked**.
 5. Select the repository folder containing `manifest.json`.
-6. Pin **RamOptimizer** from Chrome's Extensions menu.
+6. Pin **Browser Performance Manager** from Chrome's Extensions menu.
 
 The extension is designed to work directly from the repository; there is no build command.
 
@@ -63,7 +66,7 @@ Manual **Optimize now** remains conservative about active/pinned/audio/protected
 - `storage` — saves extension preferences and local statistics.
 - `alarms` — schedules low-overhead memory checks while Chrome is running.
 
-RamOptimizer has no host permissions and does not inject scripts into websites.
+Browser Performance Manager has no host permissions and does not inject scripts into websites.
 
 ## Architecture
 
@@ -81,3 +84,9 @@ A tab is excluded from optimization when it is active, pinned, audible, currentl
 ## Next useful additions
 
 Future versions can add workspace-aware protection, optional conservative request blocking, richer pressure history, and a native companion if true per-process macOS memory statistics are ever needed. Those features should stay optional so the optimizer itself remains lightweight.
+
+## Product scope
+
+This extension manages browser tabs; it does not directly "clear" system RAM. Chrome's stable extension APIs expose system memory and tab discard state, but do not expose a reliable per-tab RAM figure. For that reason the UI calls the tab list **Tab pressure** rather than claiming an exact memory number per tab. The manager uses safe signals such as inactivity age, duplicate URLs, tab state, and protection rules to decide which tabs are candidates.
+
+Chrome's tab discard API keeps a discarded tab visible and reloads its content when the user activates it. citeturn1search4
