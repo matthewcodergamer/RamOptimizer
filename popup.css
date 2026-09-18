@@ -161,3 +161,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .footer button { flex: 0 0 auto; padding: 0; border: 0; background: none; color: #4d5550; font-size: 10.5px; font-weight: 620; cursor: pointer; }
 .footer button:hover { color: var(--green-dark); }
+
+.tab-section { margin-top: 14px; }
+.tab-list { display: grid; gap: 6px; }
+.tab-item { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.tab-item strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.8px; font-weight: 620; }
+.tab-item span { color: var(--amber); font-size: 9.5px; font-weight: 600; }
+.tab-item small { grid-column: 1 / -1; color: var(--muted); font-size: 9.5px; }
+.tab-empty { padding: 9px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 9.8px; text-align: center; }
