@@ -54,7 +54,7 @@ jobs:
           mkdir -p dist/BrowserPerformanceManager/icons
 
           cp manifest.json dist/BrowserPerformanceManager/
-          cp background.js dist/BrowserPerformanceManager/
+          cp background.js premium.js premium-config.js dist/BrowserPerformanceManager/
           cp popup.html popup.js popup.css dist/BrowserPerformanceManager/
           cp options.html options.js options.css dist/BrowserPerformanceManager/
           cp PRIVACY.md README.md dist/BrowserPerformanceManager/
