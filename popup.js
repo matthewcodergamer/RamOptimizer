@@ -45,7 +45,7 @@ function setResult(message, kind = '') {
 
 function render(data) {
   dashboard = data;
-  const { settings, memory, tabs, currentSite, tabCandidates } = data;
+  const { settings, memory, tabs, currentSite, tabCandidates, entitlement } = data;
 
   $('#powerToggle').setAttribute('aria-checked', String(settings.enabled));
   $('#statusText').textContent = settings.enabled ? 'Automatic optimization is on' : 'Automatic optimization is off';
@@ -74,6 +74,13 @@ function render(data) {
     button.setAttribute('aria-checked', String(active));
   });
   $('#modeDescription').textContent = modeCopy[settings.mode];
+  const proActive = Boolean(entitlement?.active);
+  $('#proCard').classList.toggle('active', proActive);
+  $('#proTitle').textContent = proActive ? 'Pro is active' : 'Unlock Pro controls';
+  $('#proSummary').textContent = proActive
+    ? 'Advanced automation and session tools are enabled.'
+    : 'Custom schedules, quiet hours, unlimited protection and session snapshots.';
+  $('#proButton').textContent = proActive ? 'Manage Pro' : 'View Pro';
 
   $('#currentHost').textContent = currentSite.host || 'Browser page';
   $('#protectButton').disabled = !currentSite.host;
@@ -122,9 +129,13 @@ $('#powerToggle').addEventListener('click', async () => {
   }
 });
 
-$$('.segmented button').forEach((button) => {
+$('.segmented button').forEach((button) => {
   button.addEventListener('click', async () => {
     if (busy || !dashboard || button.dataset.mode === dashboard.settings.mode) return;
+    if (button.dataset.mode === 'maximum' && !dashboard.entitlement?.active) {
+      setResult('Maximum Saver is a Pro feature. Open Settings to activate Pro.', 'error');
+      return;
+    }
     try {
       await send('SET_MODE', { mode: button.dataset.mode });
       setResult('');
@@ -177,3 +188,5 @@ refresh();
 setInterval(() => {
   if (!busy) refresh();
 }, 5000);
+
+$('#proButton').addEventListener('click', () => chrome.runtime.openOptionsPage());
