@@ -49,7 +49,7 @@ function normalizeSettings(value) {
     ...DEFAULTS,
     ...raw,
     mode: MODES[raw.mode] ? raw.mode : DEFAULTS.mode,
-    autoSuspendMinutes: Number.isFinite(Number(raw.autoSuspendMinutes)) && Number(raw.autoSuspendMinutes) > 0
+    autoSuspendMinutes: Number.isFinite(Number(raw.autoSuspendMinutes)) && Number(raw.autoSuspendMinutes) >= 0
       ? Math.min(1440, Math.max(5, Number(raw.autoSuspendMinutes)))
       : DEFAULTS.autoSuspendMinutes,
     quietHours: normalizeQuietHours(raw.quietHours),
@@ -306,6 +306,13 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
   );
 
   if (discardCount === 0) {
+    const history = [...settings.performanceHistory, {
+      timestamp: Date.now(),
+      usedPercent: memory.usedPercent,
+      available: memory.available,
+      capacity: memory.capacity,
+      discarded: 0
+    }].slice(-48);
     const result = {
       timestamp: Date.now(),
       reason,
@@ -320,6 +327,7 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
 
     await setSettings({
       ...settings,
+      performanceHistory: history,
       stats: {
         ...settings.stats,
         cycles: settings.stats.cycles + (manual ? 0 : 1),
@@ -583,6 +591,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         const tabs = await chrome.tabs.query({});
         const urls = tabs
           .filter((tab) => /^https?:$/.test(new URL(tab.url || '').protocol))
+          .filter((tab) => typeof tab.url === 'string' && /^https?:\\/\\//.test(tab.url))
           .map((tab) => ({ url: tab.url, title: tab.title || '' }));
         if (!urls.length) throw new Error('There are no restorable web tabs in this window.');
         const settings = await getSettings();
@@ -619,6 +628,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
       case 'SET_MODE': {
         if (!MODES[message.mode]) throw new Error('Unknown optimizer mode.');
+        if (message.mode === 'maximum') await requirePro();
         const settings = await patchSettings({ mode: message.mode });
         return { ok: true, settings };
       }
@@ -627,6 +637,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         const host = normalizeHost(message.host);
         if (!host) throw new Error('Enter a valid website hostname.');
         const settings = await getSettings();
+        const entitlement = await getEntitlement(settings);
+        if (!entitlement.active && !settings.protectedHosts.includes(host) && settings.protectedHosts.length >= 3) {
+          throw new Error('Free accounts can protect up to 3 websites. Pro includes unlimited protected sites.');
+        }
         const protectedHosts = [...new Set([...settings.protectedHosts, host])].sort();
         return { ok: true, settings: await patchSettings({ protectedHosts }) };
       }
