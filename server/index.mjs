@@ -101,6 +101,7 @@ async function handle(req, res) {
   }
 
   if (req.method === 'POST' && url.pathname === '/webhook') {
+    if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return json(res, 503, { error: 'Billing is not configured.' });
     const raw = await readBody(req);
     try {
       const event = stripe.webhooks.constructEvent(raw, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
