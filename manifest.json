@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Browser Performance Manager",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Keeps Chrome responsive by monitoring system memory pressure and safely suspending inactive tabs.",
   "minimum_chrome_version": "120",
   "permissions": [
@@ -32,7 +32,7 @@
   "options_page": "options.html",
   "commands": {
     "optimize-now": {
-      "description": "Run RamOptimizer now"
+      "description": "Optimize Browser Performance Manager now"
     }
   }
 }
