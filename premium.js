@@ -26,8 +26,9 @@ function decodeJwtPart(value) {
 }
 
 function pemToArrayBuffer(pem) {
-  const base64 = pem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\\s/g, '');
-  return base64UrlToBytes(base64.replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=/g, ''));
+  const base64 = pem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s/g, '');
+  const binary = atob(base64);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0)).buffer;
 }
 
 let premiumKeyPromise = null;
