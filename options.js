@@ -118,6 +118,22 @@ $('#protectForm').addEventListener('submit', async (event) => {
   }
 });
 
+$('#restoreTabsButton').addEventListener('click', async () => {
+  const button = $('#restoreTabsButton');
+  button.disabled = true;
+  button.textContent = 'Restoring…';
+  try {
+    const response = await send('RESTORE_DISCARDED');
+    setStatus(response.restored ? `${response.restored} sleeping tabs restored` : 'No sleeping tabs to restore', 'success');
+    await refresh();
+  } catch (error) {
+    setStatus(error.message, 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Restore';
+  }
+});
+
 $('#duplicatesButton').addEventListener('click', async () => {
   const button = $('#duplicatesButton');
   button.disabled = true;
