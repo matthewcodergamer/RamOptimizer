@@ -590,8 +590,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (!name) throw new Error('Give the snapshot a name.');
         const tabs = await chrome.tabs.query({});
         const urls = tabs
-          .filter((tab) => /^https?:$/.test(new URL(tab.url || '').protocol))
-          .filter((tab) => typeof tab.url === 'string' && /^https?:\\/\\//.test(tab.url))
+          .filter((tab) => typeof tab.url === 'string' && (tab.url.startsWith('https://') || tab.url.startsWith('http://')))
           .map((tab) => ({ url: tab.url, title: tab.title || '' }));
         if (!urls.length) throw new Error('There are no restorable web tabs in this window.');
         const settings = await getSettings();
