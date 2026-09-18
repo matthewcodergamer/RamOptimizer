@@ -168,13 +168,13 @@ function renderPro(data) {
   $('#deactivateLicenseButton').hidden = !active;
   $('#buyProButton').textContent = active ? 'Pro active' : 'Get Pro';
 
-  const proValues = new Set(['5', '10', '15', '180', '360', '720', '1440']);
+  const proValues = new Set(['5', '10', '360', '720', '1440']);
   [...$('#suspendSelect').options].forEach((option) => {
     option.disabled = proValues.has(option.value) && !active;
   });
   $('#suspendSummary').textContent = active
     ? 'Pro is active: choose any interval from 5 minutes to 24 hours.'
-    : 'Free: 30 minutes to 2 hours. Pro unlocks 5 minutes through 24 hours.';
+    : 'Free: 15 minutes to 3 hours. Pro adds 5, 10, 6-hour, 12-hour and 24-hour schedules.';
   $('#quietEnabled').checked = Boolean(settings.quietHours?.enabled);
   $('#quietStart').value = settings.quietHours?.start || '22:00';
   $('#quietEnd').value = settings.quietHours?.end || '07:00';
