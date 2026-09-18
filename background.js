@@ -1,9 +1,10 @@
-const STORAGE_KEY = 'ramOptimizerSettings';
-const ALARM_NAME = 'ram-optimizer-memory-check';
+const STORAGE_KEY = 'browserPerformanceManagerSettings';
+const ALARM_NAME = 'browser-performance-memory-check';
 
 const DEFAULTS = Object.freeze({
   enabled: true,
   mode: 'smart',
+  autoSuspendMinutes: 60,
   protectedHosts: [],
   stats: {
     cycles: 0,
@@ -42,6 +43,9 @@ function normalizeSettings(value) {
     ...DEFAULTS,
     ...raw,
     mode: MODES[raw.mode] ? raw.mode : DEFAULTS.mode,
+    autoSuspendMinutes: [0, 15, 30, 60, 120, 180].includes(Number(raw.autoSuspendMinutes))
+      ? Number(raw.autoSuspendMinutes)
+      : DEFAULTS.autoSuspendMinutes,
     protectedHosts: Array.isArray(raw.protectedHosts)
       ? [...new Set(raw.protectedHosts.map(normalizeHost).filter(Boolean))]
       : [],
@@ -186,7 +190,8 @@ async function buildCandidates(settings, manual = false) {
     [...frequency.entries()].filter(([, count]) => count > 1).map(([url]) => url)
   );
 
-  const minimumAge = manual ? Math.min(mode.minimumAgeMinutes, 30) : mode.minimumAgeMinutes;
+  const configuredAge = settings.autoSuspendMinutes === 0 ? mode.minimumAgeMinutes : settings.autoSuspendMinutes;
+  const minimumAge = manual ? Math.min(configuredAge, 30) : configuredAge;
 
   return tabs
     .filter((tab) => !isNeverDiscard(tab, settings))
@@ -202,7 +207,8 @@ async function buildCandidates(settings, manual = false) {
 function chooseDiscardCount(memory, mode, manual, candidateCount) {
   if (!candidateCount) return 0;
   if (manual) return Math.min(mode.maxPerCycle, candidateCount);
-  if (memory.usedPercent < mode.triggerPercent) return 0;
+  const configuredAgeSuspension = mode && candidateCount > 0;
+  if (memory.usedPercent < mode.triggerPercent && !configuredAgeSuspension) return 0;
 
   const pressureOverage = Math.max(0, memory.usedPercent - mode.triggerPercent);
   const desired = 1 + Math.floor(pressureOverage / 3);
@@ -268,11 +274,14 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
   }
 
   const discarded = await discardCandidates(candidates, discardCount);
+  const afterMemory = await getMemorySnapshot();
   const result = {
     timestamp: Date.now(),
     reason,
     discarded: discarded.length,
     beforeUsedPercent: memory.usedPercent,
+    afterUsedPercent: afterMemory.usedPercent,
+    memoryDeltaBytes: memory.used - afterMemory.used,
     message: discarded.length
       ? `${discarded.length} inactive ${discarded.length === 1 ? 'tab was' : 'tabs were'} unloaded.`
       : 'Chrome kept all candidate tabs active.'
@@ -289,7 +298,7 @@ async function runOptimization({ manual = false, reason = 'automatic' } = {}) {
     lastResult: result
   });
 
-  return { ok: true, memory, discarded, result };
+  return { ok: true, memory, afterMemory, discarded, result };
 }
 
 async function sleepDuplicateTabs() {
@@ -439,6 +448,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       case 'SET_ENABLED': {
         const settings = await patchSettings({ enabled: Boolean(message.enabled) });
         await setBadgeFromMemory();
+        return { ok: true, settings };
+      }
+
+      case 'SET_AUTO_SUSPEND': {
+        const minutes = Number(message.minutes);
+        if (![0, 15, 30, 60, 120, 180].includes(minutes)) throw new Error('Unsupported suspension interval.');
+        const settings = await patchSettings({ autoSuspendMinutes: minutes });
         return { ok: true, settings };
       }
 
